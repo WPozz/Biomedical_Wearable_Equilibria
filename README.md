@@ -1,1 +1,3 @@
-# Biomedical_Wearable_Project
+# Biomedical_Wearable_Projectù
+
+Hello! Let's build something interesting!
