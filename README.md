@@ -1,3 +1,3 @@
-# Biomedical_Wearable_Project
+# **Biomedical Wearable Project**
 
-Hello! Let's build something interesting!
+Hello! Let's build something interesting :)
