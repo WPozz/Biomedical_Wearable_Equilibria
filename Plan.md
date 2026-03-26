@@ -66,3 +66,7 @@ Futturi sviluppi:
 
 
 ---
+
+# Idee: 
+
+- Log-in con mail e password. 
