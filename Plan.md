@@ -41,3 +41,28 @@ Futturi sviluppi:
 - Mappa dello stress (luoghi e lavori)
 - Classificare le aziende per stress ( anche per reparti ) 
 
+
+-- 
+# Questionario
+
+1. Il tuo lavoro è attivo o no? 
+
+2. Ogni quanto tempo fai una pausa di 2 minuti ...
+
+3. Quanto è importante per te la salute mentale sul luogo di lavoro?
+
+4. Vorresti che il tuo datore di lavoro si interessasse di più alla salute mentale dei dipendenti?
+
+5. Indosseresti uno smart watch durante la giornata (e di notte) per monitorare il tuo benessere?
+
+6. Vorresti avere un quadro dell'anadmetno del tuo stato di salute mentale?
+
+7. Ogni quanto tempo fai esercizio fisico
+- Meno di 3 volte a settimana
+- 3-5 volte a settimana
+- Praticamente tutti i giorni
+
+8. Cosa vorresti sapere riguardo al tuo benessere sul posto di lavoro? (per avere idee e feedback)
+
+
+---
