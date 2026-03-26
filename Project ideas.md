@@ -1,0 +1,3 @@
+# Main Ideas
+
+something smart...
