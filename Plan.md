@@ -24,6 +24,7 @@
 -  Invio dei dati al datore di lavoro per supervisionare il benessere ( il datore si vanta che i suoi dipendenti stanno bene) 
 -  Trend dell'indice ( per 3 giorni sei basso, conviene che riduci il lavoro) 
 -  Resoconto settimanale, mensile e annuale. (Girono, mese più stressante)
+-  Confronto fra reparti (+ con media locale/nazionale)
 
 ### Funzionalità aggiuntive: 
 
