@@ -55,3 +55,4 @@ lib/
 
 ### 2. Diagramma Architetturale (Codice SVG)
 
+![App Architecture](./Architecture.svg)
