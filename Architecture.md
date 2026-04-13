@@ -22,6 +22,8 @@ Focuses on immediate feedback and context-aware alerts.
 - **Quick Metrics**: Daily steps, sleep duration, and active calories.
 - **Contextual Muscle Alert**: A smart banner that triggers only after prolonged inactivity (e.g., 60 minutes) suggesting a quick stretch.
 
+<img width="1280" height="720" alt="immagine" src="https://github.com/user-attachments/assets/9e6bd0cd-637f-46cf-80ef-9e66316cce89" />
+
 ### 2. Analysis & Trends
 Helps the user understand long-term patterns and social determinants of their health.
 - **HRV Weekly Trend**: Line charts visualizing stress peaks.
@@ -56,3 +58,8 @@ lib/
 ### 2. Diagramma Architetturale (Codice SVG)
 
 ![App Architecture](./Architecture.svg)
+
+
+### 3. Demo (da prendere con le pinze) 
+
+https://app.nowa.dev/home-page
