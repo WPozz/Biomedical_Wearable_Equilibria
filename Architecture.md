@@ -63,3 +63,37 @@ lib/
 ### 3. Demo (da prendere con le pinze) 
 
 https://app.nowa.dev/home-page
+
+
+
+---
+
+# Navigation bar da 4
+
+## Homepage 
+-widget colorato. 
+- Tasto pausa
+- Metriche veloci
+- Facce sorridenti
+- Obiettivo ? (mini-counter)
+
+## Pagina dei dato  
+- listview con metriche ( con possibilità di vederle giorno per giorno) con Stress Index per primo.
+- Cliccando sulla singola metrica si vede il trend di quella metrica (settimana/mese)
+
+## Esercizi
+- 4 esercizi "generici" rapidi
+- listview scrollabile con tutti gli esercizi
+- tasto di "cerca esercizio" che apre uno schermo con immagine del corpo e tempo
+
+## Profilo utente
+- 
+
+
+## Profilo utente: 
+- Dati personali
+- Report mensile (raccolta annuale)
+- Notifiche (veloce con on-off e impostazioni)
+- Obiettivi
+
+
