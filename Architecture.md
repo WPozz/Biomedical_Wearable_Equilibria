@@ -14,31 +14,47 @@ The architecture is built on the principles of **Health Design Thinking**:
 ---
 
 ## 🏛️ UI Architecture (The 4-Tab Navigation)
-The app utilizes a flat navigation pattern via a `BottomNavigationBar` paired with an `IndexedStack` to preserve state across tabs.
+Theapp utilizes a flat navigation pattern via a `BottomNavigationBar` paired with an `IndexedStack` to preserve state across tabs.
 
-### 1. Live Dashboard (Home)
+### 1. Homepage
 Focuses on immediate feedback and context-aware alerts.
-- **Stress Gauge**: A real-time visual indicator (0-100) based on HRV (Heart Rate Variability).
-- **Quick Metrics**: Daily steps, sleep duration, and active calories.
-- **Contextual Muscle Alert**: A smart banner that triggers only after prolonged inactivity (e.g., 60 minutes) suggesting a quick stretch.
+- widget colorato (sort of graphic indicator)
+- Tasto pausa 
+- Metriche veloci 
+- Facce sorridenti (feedback della giornata) 
+- Obiettivo (mini-counter)
 
-<img width="1280" height="720" alt="immagine" src="https://github.com/user-attachments/assets/9e6bd0cd-637f-46cf-80ef-9e66316cce89" />
+
+<img width="1024" height="559" alt="immagine" src="https://github.com/user-attachments/assets/a48ede11-f659-4b8f-9480-52470c5c2d91" />
+
+---
 
 ### 2. Analysis & Trends
-Helps the user understand long-term patterns and social determinants of their health.
-- **HRV Weekly Trend**: Line charts visualizing stress peaks.
-- **Context Logging**: Interface to map daily stress against external factors (e.g., long meetings, traffic).
+- listview con metriche (con possibilità di vederle giorno per giorno) con Stress Index per primo.
+- Cliccando sulla singola metrica si vede il trend di quella metrica (settimana/mese)
+
+<img width="1024" height="559" alt="immagine" src="https://github.com/user-attachments/assets/d76f4338-d7f8-434e-85b0-916db6504a18" />
+
+---
 
 ### 3. Recovery & Check-in
 Actionable tools to mitigate stress and physical tension.
-- **Exercise Library**: A grid of quick posture/stretching video routines.
-- **Emotional Check-in**: A daily rapid slider/emoji input to track perceived psychological stress versus physiological data.
+- 4 esercizi "generici" rapidi (al centro)
+- listview scrollabile con tutti gli esercizi (filtrabili in ordine alfabetico, di tempo o per distretto)
+- tasto di "cerca esercizio" che apre uno schermo con immagine del corpo (indica cosa vorresti allenare) e tempo (quanto tempo hai a disposizione)
+
+<img width="1024" height="559" alt="immagine" src="https://github.com/user-attachments/assets/1c965142-bf16-4a57-975f-8d2fe39cc2fa" />
+
+---
 
 ### 4. Profile & Privacy
 User control center ensuring total data transparency.
-- **User Identity**: Work department and professional role.
-- **Privacy Controls**: Toggles to manage what aggregated data is shared with the employer.
-- **Device Management**: Wearable API synchronization status.
+- Dati personali
+- Report mensile (raccolta annuale)
+- Notifiche (veloce con on-off e impostazioni)
+- Obiettivi
+
+<img width="1024" height="559" alt="immagine" src="https://github.com/user-attachments/assets/c1ca03e6-66d1-41e3-98b7-8e65d7e8250c" />
 
 ---
 
@@ -65,35 +81,5 @@ lib/
 https://app.nowa.dev/home-page
 
 
-
----
-
-# Navigation bar da 4
-
-## Homepage 
--widget colorato. 
-- Tasto pausa
-- Metriche veloci
-- Facce sorridenti
-- Obiettivo ? (mini-counter)
-
-## Pagina dei dato  
-- listview con metriche ( con possibilità di vederle giorno per giorno) con Stress Index per primo.
-- Cliccando sulla singola metrica si vede il trend di quella metrica (settimana/mese)
-
-## Esercizi
-- 4 esercizi "generici" rapidi
-- listview scrollabile con tutti gli esercizi
-- tasto di "cerca esercizio" che apre uno schermo con immagine del corpo e tempo
-
-## Profilo utente
-- 
-
-
-## Profilo utente: 
-- Dati personali
-- Report mensile (raccolta annuale)
-- Notifiche (veloce con on-off e impostazioni)
-- Obiettivi
 
 
