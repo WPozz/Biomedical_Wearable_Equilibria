@@ -81,5 +81,6 @@ lib/
 https://app.nowa.dev/home-page
 
 
+> Nota: Potrebbe capitare che un processo "asincrono" venga compilato dopo il build method che dovrebbe aggiornare (Esempio di counter con valore Null di partenza, il valore di default era Null e non il valore precedente per un missmatch nella velocità di compilazione). Questo classico errore di save-state si può risolvere con uno special widget "future builder". Future builder è un widget che builda seguendo il valore di un "future". 
 
 
