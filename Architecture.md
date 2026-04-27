@@ -235,7 +235,7 @@ L'idea della pipeline è la seguente (Approccio a cancello) :
 
 Serve anche implementare il concetto di "Persistenza" ossia un servizio per salvare il token localmente, così l'utente non deve fare il login ogni volta che riapre l'app. 
 
-## Componenti secondarie da considerae:
+## :white_flag: Componenti secondarie da considerae:
 
 - Splash screen: Una schermata iniziale veloce (con nome e/o logo) che appare mentre il AuthProvider controlla se l'utente era già loggato
 
