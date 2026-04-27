@@ -72,6 +72,10 @@ lib/
  │    └── user_profile.dart         
  ├── services/                      # (Chiamate API, DB locale)
  │    └── api_service.dart
+ |
+ |___data/
+ |       --- video_archive.dart
+ | 
  ├── providers/                     # (State Management)
  │    └── health_data_provider.dart
  ├── widgets/                       # (Componenti UI riutilizzabili)
