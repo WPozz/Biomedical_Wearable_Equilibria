@@ -61,14 +61,27 @@ User control center ensuring total data transparency.
 ## 💻 Technical Stack & Implementation Plan
 
 ### Folder Structure
+
 ```text
 lib/
- ├── main.dart
- ├── models/          # Data structures (User, HealthMetrics)
- ├── providers/       # State Management (HealthDataProvider)
- ├── screens/         # Main UI Tabs (Home, Analysis, Recovery, Profile)
- ├── services/        # APIs & Background tasks (FitbitAPI, LocalNotifs)
- └── widgets/         # Reusable UI components (StressGauge, MuscleAlert)
+ ├── main.dart                      # Punto di ingresso dell'app (codice che runna)
+ ├── screens/                       # (Tutti gli schermi principali)
+ │    ├── home_page.dart            
+ │    ├── analysis_and_trends.dart  
+ │    ├── exercise_page.dart        
+ │    └── user_profile.dart         
+ ├── services/                      # (Chiamate API, DB locale)
+ │    └── api_service.dart
+ ├── providers/                     # (State Management)
+ │    └── health_data_provider.dart
+ ├── widgets/                       # (Componenti UI riutilizzabili)
+ │    ├── metric_trend_chart.dart
+ │    └── time_period_selector.dart
+ ├── models/                        # (Strutture Dati / JSON parsing)
+ │    ├── metric_point.dart
+ │    └── health_metrics.dart
+ └── utils/                         # (Logica matematica e calcoli)
+      └── stress_calculator.dart    # Algoritmo dello IUSM
 ```
 
 ### 2. Diagramma Architetturale (Codice SVG)
@@ -83,7 +96,11 @@ https://app.nowa.dev/home-page
 
 > Nota: Potrebbe capitare che un processo "asincrono" venga compilato dopo il build method che dovrebbe aggiornare (Esempio di counter con valore Null di partenza, il valore di default era Null e non il valore precedente per un missmatch nella velocità di compilazione). Questo classico errore di save-state si può risolvere con uno special widget "future builder". Future builder è un widget che builda seguendo il valore di un "future". Inoltre, è importante rimuovere "init state" da qualsiasi processo asincrono. Praticamente basta rifattorizzare il codice usando un "future builder". 
 
-### About Stress Index: 
+
+## :heavy_division_sign: Models and Indexes : 
+
+
+### About Stress... 
 
 Lo stress, definito biologicamente come uno stato di minaccia all'omeostasi, innesca complesse risposte neuroendocrine e autonomiche. L'esposizione prolungata a tali fattori di stress, in assenza di un recupero adeguato, conduce a un accumulo di usura fisiologica clinicamente denominato "carico allostatico". La capacità di prevedere e quantificare accuratamente questo stato in tempo reale offre enormi prospettive per interventi sanitari personalizzati, modifiche comportamentali e la prevenzione di patologie cardiometaboliche e psichiatriche croniche.
 
