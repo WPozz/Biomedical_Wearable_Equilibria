@@ -215,3 +215,28 @@ Equazione Finale di Integrazione e Analisi PredittivaL'Indice Unificato di Stres
 $$IUSM_{attuale} = - \alpha(S_{sforzo}) - \beta(S_{stress})$$
 
 Dove i coefficienti $\alpha$ e $\beta$ sono parametri di ponderazione predefiniti nel backend (calibrabili tramite machine learning in futuro) che definiscono l'impatto distruttivo relativo dello sforzo muscolare rispetto alla tossicità del sovraccarico cognitivo autonomico sulla batteria fisiologica totale. Un'applicazione in grado di monitorare questo indice complesso fornisce all'utente finale un barometro impareggiabile della propria salute. Se lo $IUSM_{attuale}$ dovesse scendere al di sotto di una soglia predefinita (ad esempio, 30/100) nel primo pomeriggio, l'applicazione riceverebbe l'input necessario per attivare interventi comportamentali proattivi: suggerire l'interruzione del lavoro per sessioni di biofeedback o respirazione lenta per riattivare immediatamente il tono vagale, sconsigliare un allenamento cardio ad alta intensità a favore di uno yoga leggero, o avvisare l'utente di prioritizzare un ingresso anticipato nel ciclo del sonno per evitare l'instaurarsi a lungo termine di un pericoloso carico allostatico e il conseguente esaurimento nervoso. L'inclusione metodica della variabilità cardiaca, della dinamica dell'adiposità e dell'architettura vettoriale del sonno posiziona definitivamente questo indice ai vertici assoluti della fisiologia indossabile moderna.
+
+---
+
+## :key: Authentication (Log-in / Log-out): 
+
+L'authentication viene definita come un servizio (per comunicare con il server) e uno stato (per sapere se l'utente è dentro o fuori) che avvolge l'intera applicazione. 
+
+Idealmente, servirebbero dei file:
+- lib/services/auth_service.dart: Qui si scrive la logica per inviare le credenziali (email/password) alle REST API e per gestire i token di sessione. 
+- lib/providers/auth_provider.dart: Questo state manager conterrà l'oggetto User (se loggato) o un valore null. Notificherà a tutta l'app quando l'utente entra o esce
+- lib/screens/login_page.dart: La schermata UI dove l'utente inserisce i dati
+
+L'idea della pipeline è la seguente (Approccio a cancello) :
+1. L'app si avvia
+2. Il AuthProvider controlla se esiste un token salvato in memoria tramite Shared Preferences.
+3. Se il token esiste: Carica la MainNavigationShell (i 4 screen)
+4. Se il token non esiste: Mostra la LoginPage
+
+Serve anche implementare il concetto di "Persistenza" ossia un servizio per salvare il token localmente, così l'utente non deve fare il login ogni volta che riapre l'app. 
+
+## Componenti secondarie da considerae:
+
+- Splash screen: Una schermata iniziale veloce (con nome e/o logo) che appare mentre il AuthProvider controlla se l'utente era già loggato
+
+
