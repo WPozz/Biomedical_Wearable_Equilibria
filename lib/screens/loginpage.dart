@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/main_wrapper.dart'; 
 import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart'; // Assicurati che il percorso sia corretto rispetto a dove hai creato la cartella providers
-
-// Delegated Authorization: Google, Facebook, ... how? (OAuth, go to the Google server and register the app, Google will give us an API Key to authenticate our app to their servers (we'll pay for the tokens)). 
-
+import '../providers/auth_provider.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -14,134 +10,216 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  
+  // Pre-compiliamo i campi per comodità durante la demo
+  final TextEditingController _usernameController = TextEditingController(text: 'VKM4CPfO22');
+  final TextEditingController _passwordController = TextEditingController(text: '12345678!');
+  
+  bool _isLoading = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  
-  InputDecoration _buildInputDecoration(String label) {
-    return InputDecoration(
-      labelText: label,
-      filled: true,
-      fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15),
-        borderSide: BorderSide.none,
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15),
-        borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
-      ),
+  Future<void> _handleLogin() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    // Tentativo di login verso il server IMPACT
+    final success = await authProvider.login(
+      _usernameController.text.trim(),
+      _passwordController.text,
     );
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (success) {
+        // Se il login ha successo, il Consumer in main.dart ci porterà
+        // automaticamente alla MainWrapper. Non serve fare Navigator.push!
+        print("Login riuscito!");
+      } else {
+        // Mostriamo l'errore in modo elegante
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error_outline, color: Theme.of(context).colorScheme.onError),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Login failed. Please check your credentials.',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onError),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.only(bottom: 20, left: 16, right: 16),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
+      backgroundColor: scheme.surface,
       body: SafeArea(
-        child: Center(
+        child: Center( // Centriamo il form nello schermo
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Logo o Icona
-                Icon(Icons.sentiment_satisfied_alt_rounded, size: 80, color: colorScheme.primary),
-                const SizedBox(height: 30),
-                
-                // Testo di benvenuto
-                Text(
-                  "Welcome Back",
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  "Log in to monitor your stress levels",
-                  style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 16),
-                ),
-                const SizedBox(height: 40),
+            padding: const EdgeInsets.all(24.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Logo o Titolo
+                  Icon(
+                    Icons.spa_rounded, // Sostituisci con il tuo Image.asset se hai un logo
+                    size: 80,
+                    color: scheme.primary,
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Welcome to Kairos',
+                    textAlign: TextAlign.center,
+                    style: textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Log in to access your health data',
+                    textAlign: TextAlign.center,
+                    style: textTheme.bodyLarge?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 48),
 
-                // Campo Email
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: _buildInputDecoration('Email'),
-                ),
-                const SizedBox(height: 20),
+                  // Campo Username
+                  TextFormField(
+                    controller: _usernameController,
+                    decoration: InputDecoration(
+                      labelText: 'Username',
+                      prefixIcon: const Icon(Icons.person_outline),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      filled: true,
+                      fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your username';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 20),
 
-                // Campo Password
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  decoration: _buildInputDecoration('Password'),
-                ),
-                const SizedBox(height: 40),
+                  // Campo Password
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      filled: true,
+                      fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your password';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 32),
 
-                // Bottone Log In
-                ElevatedButton.icon(
-  onPressed: () {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const MainWrapper()),
-    );
-  },
-  style: ElevatedButton.styleFrom(
-    backgroundColor: colorScheme.primary,
-    foregroundColor: colorScheme.onPrimary,
-    minimumSize: const Size(double.infinity, 65),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-    elevation: 2,
-  ),
-  icon: const Icon(Icons.login, size: 22),
-  label: const Text('LOG IN', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-),
-
-ElevatedButton.icon(
-  onPressed: () async {
-    // Leggiamo il provider senza metterci in ascolto
-    final authProvider = context.read<AuthProvider>();
-    
-    // Usiamo il controller per le credenziali (nel documento del prof era Jpefaq6m58 come username)
-    bool success = await authProvider.login(
-      _emailController.text, // Modifica l'etichetta dell'input in "Username" se preferisci
-      _passwordController.text 
-    );
-
-    if (success) {
-      if (context.mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainWrapper()),
-        );
-      }
-    } else {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Login fallito! Controlla le credenziali.')),
-        );
-      }
-    }
-  },
-  // ... resto dello stile del bottone ...
-style: ElevatedButton.styleFrom(
-  backgroundColor: colorScheme.primary,
-  foregroundColor: colorScheme.onPrimary,
-  minimumSize: const Size(double.infinity, 65),
-  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-  elevation: 2,
-),
-icon: const Icon(Icons.fiber_new_rounded, size: 22),
-label: const Text('SIGN UP', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-), 
-              ],
+                  // Bottone Log In
+                  SizedBox(
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _handleLogin,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: scheme.primary,
+                        foregroundColor: scheme.onPrimary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: _isLoading
+                          ? SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                color: scheme.onPrimary,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              'Log In',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                    ),
+                  ),
+                  
+                  // Link "Forgot Password" (Opzionale)
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () {
+                      // Implementare logica di recupero password in futuro
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please contact your administrator to reset your password.')),
+                      );
+                    },
+                    child: Text(
+                      'Forgot Password?',
+                      style: TextStyle(color: scheme.primary),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
