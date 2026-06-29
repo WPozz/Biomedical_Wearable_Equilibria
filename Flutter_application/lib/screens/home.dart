@@ -123,18 +123,6 @@ class _HomeScreenState extends State<HomeScreen> {
       final List<MetricPoint> distancePoints = results[3];
       final List<MetricPoint> stressPoints   = results[4];
 
-      // DEBUG: stampiamo i dati grezzi per verificare cosa arriva dall'API
-      print('HOME DEBUG sleep    -> ${sleepPoints.length} punti: '
-          '${sleepPoints.map((p) => "${p.fullLabel}=${p.value}").toList()}');
-      print('HOME DEBUG steps    -> ${stepsPoints.length} punti: '
-          '${stepsPoints.map((p) => "${p.fullLabel}=${p.value}").toList()}');
-      print('HOME DEBUG calories -> ${caloriesPoints.length} punti: '
-          '${caloriesPoints.map((p) => "${p.fullLabel}=${p.value}").toList()}');
-      print('HOME DEBUG distance -> ${distancePoints.length} punti: '
-          '${distancePoints.map((p) => "${p.fullLabel}=${p.value}").toList()}');
-      print('HOME DEBUG stress   -> ${stressPoints.length} punti: '
-          '${stressPoints.map((p) => "${p.fullLabel}=${p.value}").toList()}');
-
       // ── PERCHÉ sommiamo i valori? ─────────────────────────────────────────
       //
       // fetchSingleDayMetric restituisce i dati "grezzi" intraday:
@@ -148,6 +136,7 @@ class _HomeScreenState extends State<HomeScreen> {
       //
       // Il sonno è diverso: fetchSingleDayMetric per 'sleep' restituisce
       // già un singolo punto con le ore totali → prendiamo solo .first.value
+      
       double sumValues(List<MetricPoint> points) => points.isEmpty
           ? 0.0
           : points.map((p) => p.value).reduce((a, b) => a + b);
