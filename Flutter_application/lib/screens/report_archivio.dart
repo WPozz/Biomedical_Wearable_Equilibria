@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:flutter_application/providers/settings_provider.dart';
 import 'package:flutter_application/providers/data_provider.dart';
 import 'package:flutter_application/utils/weekly_report_model.dart';
-import 'package:flutter_application/services/weekly_report_builder.dart';
 import 'report_dettaglio.dart';
 
 class ReportArchivioScreen extends StatefulWidget {
@@ -24,7 +23,18 @@ class _ReportArchivioScreenState extends State<ReportArchivioScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadReports());
   }
 
-  Future<void> _loadReports() async {
+  // ── NOTA SUL FIX ───────────────────────────────────────────────────────
+  // Prima questa schermata leggeva/scriveva direttamente il campo pubblico
+  // dataProvider.cachedArchive, che non notificava mai nessun listener e
+  // non era in nessun modo coordinato con Profile (che calcolava la stessa
+  // prima settimana per conto suo). Ora deleghiamo tutto a
+  // DataProvider.getOrFetchArchive(), che:
+  // - riusa l'eventuale report "ultima settimana" già calcolato da Profile
+  //   o dalla Home, evitando di rifare le stesse ~9 chiamate di rete
+  // - notifica correttamente tutti i listener quando i dati cambiano
+  // - popola via via la lista tramite onProgress, mantenendo lo stesso
+  //   comportamento "una card alla volta" di prima
+  Future<void> _loadReports({bool forceRefresh = false}) async {
     if (!mounted) return;
     setState(() {
       _isLoading = true;
@@ -33,100 +43,23 @@ class _ReportArchivioScreenState extends State<ReportArchivioScreen> {
 
     try {
       final dataProvider = context.read<DataProvider>();
-
-      // Controlla la cache nel provider
-      final cached = dataProvider.cachedArchive;
-      if (cached != null) {
-        final ranges = WeeklyReportBuilder.buildWeekRanges();
-
-        if (cached.length >= ranges.length) {
-          // Cache completa → mostra subito, nessuna chiamata API
-          setState(() {
-            _reports   = List.from(cached);
-            _isLoading = false;
-          });
-          return;
-        }
-
-        // Cache parziale → mostra quello che c'è e continua dal punto in cui si era fermato
-        final List<WeeklyReport> reports = List.from(cached);
-        // Riempie i posti mancanti con placeholder
-        while (reports.length < ranges.length) {
-          final r = ranges[reports.length];
-          reports.add(WeeklyReport.empty(
-            weekStart:   r.start,
-            weekEnd:     r.end,
-            dateRangeIt: '',
-            dateRangeEn: '',
-          ));
-        }
-        if (mounted) setState(() => _reports = List.from(reports));
-
-        final settings     = context.read<SettingsProvider>();
-        final stepsTarget  = settings.steps;
-        final sleepTarget  = settings.sleepHours.toDouble();
-        final goalsEnabled = settings.customGoalsEnabled;
-
-        // Riprende dal primo indice non ancora caricato
-        for (int i = cached.length; i < ranges.length; i++) {
-          if (!mounted) return;
-          final r      = ranges[i];
-          final report = await WeeklyReportBuilder.build(
-            dataProvider:    dataProvider,
-            weekStart:       r.start,
-            weekEnd:         r.end,
-            stepsGoalTarget: stepsTarget,
-            sleepGoalHours:  sleepTarget,
-            goalsEnabled:    goalsEnabled,
-          );
-          reports[i] = report;
-          dataProvider.cachedArchive = List.from(reports);
-          if (mounted) setState(() => _reports = List.from(reports));
-        }
-
-        if (mounted) setState(() => _isLoading = false);
-        return;
-      }
-
       final settings     = context.read<SettingsProvider>();
-      final stepsTarget  = settings.steps;
-      final sleepTarget  = settings.sleepHours.toDouble();
-      final goalsEnabled = settings.customGoalsEnabled;
-      final ranges       = WeeklyReportBuilder.buildWeekRanges();
 
-      // Pre-popola con placeholder vuoti: la lista appare subito
-      final List<WeeklyReport> reports = ranges.map((r) => WeeklyReport.empty(
-        weekStart:   r.start,
-        weekEnd:     r.end,
-        dateRangeIt: '',
-        dateRangeEn: '',
-      )).toList();
-      if (mounted) setState(() => _reports = List.from(reports));
-
-      // Una settimana alla volta: ogni card appare appena è pronta
-      for (int i = 0; i < ranges.length; i++) {
-        if (!mounted) return;
-
-        final r = ranges[i];
-        final report = await WeeklyReportBuilder.build(
-          dataProvider:    dataProvider,
-          weekStart:       r.start,
-          weekEnd:         r.end,
-          stepsGoalTarget: stepsTarget,
-          sleepGoalHours:  sleepTarget,
-          goalsEnabled:    goalsEnabled,
-        );
-
-        reports[i] = report;
-        // Salva in cache dopo ogni settimana — così se l'utente esce prima
-        // che il loop finisca, le settimane già caricate sono comunque in cache
-        dataProvider.cachedArchive = List.from(reports);
-        if (mounted) setState(() => _reports = List.from(reports));
-      }
+      final reports = await dataProvider.getOrFetchArchive(
+        stepsGoalTarget: settings.steps,
+        sleepGoalHours:  settings.sleepHours.toDouble(),
+        goalsEnabled:    settings.customGoalsEnabled,
+        forceRefresh:    forceRefresh,
+        onProgress: (partial) {
+          if (mounted) setState(() => _reports = partial);
+        },
+      );
 
       if (!mounted) return;
-      setState(() => _isLoading = false);
-
+      setState(() {
+        _reports   = reports;
+        _isLoading = false;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -180,11 +113,7 @@ class _ReportArchivioScreenState extends State<ReportArchivioScreen> {
           if (!_isLoading)
             IconButton(
               icon: Icon(Icons.refresh_rounded, color: colorScheme.primary),
-              onPressed: () {
-                // Svuota la cache e ricarica
-                context.read<DataProvider>().cachedArchive = null;
-                _loadReports();
-              },
+              onPressed: () => _loadReports(forceRefresh: true),
               tooltip: isItalian ? 'Ricarica' : 'Refresh',
             ),
         ],
@@ -230,7 +159,7 @@ class _ReportArchivioScreenState extends State<ReportArchivioScreen> {
               ),
               const SizedBox(height: 24),
               FilledButton.icon(
-                onPressed: _loadReports,
+                onPressed: () => _loadReports(forceRefresh: true),
                 icon: const Icon(Icons.refresh),
                 label: Text(isItalian ? 'Riprova' : 'Retry'),
               ),

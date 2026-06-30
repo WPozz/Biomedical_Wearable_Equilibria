@@ -102,7 +102,7 @@ class MyApp extends StatelessWidget { // stateless because the theme and title o
         '/auth_gate': (context) => Consumer<AuthProvider>(
           builder: (context, authProvider, child) {
             return authProvider.isAuthenticated 
-                ? const MainWrapper() 
+                ? const MainWrapper()
                 : const LoginPage();
           },
         ),

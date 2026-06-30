@@ -3,14 +3,22 @@ import 'dart:async';
 import 'package:provider/provider.dart';
 import 'package:flutter_application/providers/settings_provider.dart';
 import 'package:flutter_application/providers/data_provider.dart';
-import 'package:flutter_application/models/metric_point.dart'; // ← aggiunto: serve per tipizzare esplicitamente List<MetricPoint>
+import 'package:flutter_application/models/metric_point.dart';
 import 'package:flutter_application/utils/weekly_report_model.dart';
 import 'package:flutter_application/services/weekly_report_builder.dart';
 import 'package:flutter_application/screens/pausa_attiva.dart';
 import 'package:flutter_application/screens/report_dettaglio.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  // Callback invocato quando il caricamento dei dati giornalieri (sleep,
+  // steps, calorie, distanza, stress di oggi) è terminato — con successo
+  // o errore. Usato da MainWrapper per far partire il prefetch
+  // dell'archivio SOLO dopo che la Home ha finito le sue richieste,
+  // evitando di sommare carico di rete proprio nella finestra più
+  // delicata appena dopo il login (vedi nota in main_wrapper.dart).
+  final VoidCallback? onDailyDataLoaded;
+
+  const HomeScreen({super.key, this.onDailyDataLoaded});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -30,6 +38,16 @@ class _HomeScreenState extends State<HomeScreen> {
   double _calories = 0;
   double _distanceKm = 0;
 
+  // ── Stato del report settimanale (card "ultimo report") ───────────────────
+  // PERCHÉ: prima la Home leggeva solo passivamente
+  // context.watch<DataProvider>().lastWeeklyReport, che però non veniva
+  // MAI scritto da nessuna parte se non si era prima passati dal Profilo.
+  // Ora la Home stessa richiede il report alla cache condivisa: se è già
+  // presente (perché un'altra schermata l'ha già calcolato) lo riceve subito
+  // senza nuove chiamate di rete; altrimenti lo calcola una volta e lo
+  // condivide con tutte le altre schermate.
+  bool _isLoadingReport = true;
+
   late final DateTime _syncedDay;
   late final String _syncedDayStr;
 
@@ -47,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     // kArchiveEnd è il 21 giugno 2026 (ultimo giorno dell'archivio Fitbit).
-    // Il giorno che mostriamo in home è il 22 giugno:
+    // Mostriamo il 22 giugno perché:
     // - i dati di attività (steps, calories, distance) sono stati registrati il 22
     // - il sonno del 22 è la notte tra il 21 e il 22, che il Fitbit associa
     //   alla data di sveglia (22 giugno) → esiste nell'API
@@ -56,7 +74,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Carichiamo i dati solo dopo che il primo frame è stato renderizzato,
     // così il context è già disponibile per leggere il DataProvider
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadDailyData());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadDailyData();
+      _loadWeeklyReport();
+    });
   }
 
   @override
@@ -71,6 +92,27 @@ class _HomeScreenState extends State<HomeScreen> {
       '${d.month.toString().padLeft(2, '0')}-'
       '${d.day.toString().padLeft(2, '0')}';
 
+  Future<void> _loadWeeklyReport({bool forceRefresh = false}) async {
+    if (!mounted) return;
+    setState(() => _isLoadingReport = true);
+
+    final dataProvider = context.read<DataProvider>();
+    final settings     = context.read<SettingsProvider>();
+
+    try {
+      await dataProvider.getOrFetchLatestReport(
+        stepsGoalTarget: settings.steps,
+        sleepGoalHours:  settings.sleepHours.toDouble(),
+        goalsEnabled:    settings.customGoalsEnabled,
+        forceRefresh:    forceRefresh,
+      );
+    } catch (e) {
+      print('HOME DEBUG ERROR durante _loadWeeklyReport: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingReport = false);
+    }
+  }
+
   Future<void> _loadDailyData() async {
     final dataProvider = context.read<DataProvider>();
 
@@ -84,27 +126,16 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       // ── PERCHÉ fetchSingleDayMetric e non fetchMetricRange? ───────────────
       //
-      // Il DataProvider espone due metodi per ottenere dati:
+      // fetchMetricRange chiama /daterange/start_date/.../end_date/
+      // → funziona bene per range di 7+ giorni (grafici settimanali)
+      // → restituisce lista VUOTA quando start == end (un solo giorno)
       //
-      // 1. fetchMetricRange(metric, startDate, endDate)
-      //    → chiama l'endpoint: /daterange/start_date/.../end_date/.../
-      //    → aggrega i dati giorno per giorno e restituisce un MetricPoint
-      //      per ogni giorno (con il valore già sommato o mediato)
-      //    → funziona bene per range di 7+ giorni (es. grafici settimanali)
-      //    → PROBLEMA: quando startDate == endDate (un solo giorno),
-      //      l'API /daterange/ restituisce lista vuota → nessun dato
+      // fetchSingleDayMetric chiama /day/<data>/
+      // → corretto per un singolo giorno, restituisce punti intraday
+      // → è l'endpoint giusto per la home che mostra sempre "oggi"
       //
-      // 2. fetchSingleDayMetric(metric, day)
-      //    → chiama l'endpoint: /day/<date>/
-      //    → restituisce tutti i punti intraday della giornata
-      //      (per steps/calories/distance: un punto ogni minuto)
-      //    → funziona correttamente anche per un singolo giorno
-      //    → è l'endpoint giusto per la home, che mostra sempre "oggi"
-      //
-      // La scelta corretta per la home è quindi fetchSingleDayMetric.
-      // Lanciamo tutte e 5 le fetch in parallelo con Future.wait per
+      // Lanciamo tutte le fetch in parallelo con Future.wait per
       // minimizzare il tempo di attesa totale.
-
       final results = await Future.wait([
         dataProvider.fetchSingleDayMetric('sleep',    _syncedDayStr),
         dataProvider.fetchSingleDayMetric('steps',    _syncedDayStr),
@@ -123,9 +154,21 @@ class _HomeScreenState extends State<HomeScreen> {
       final List<MetricPoint> distancePoints = results[3];
       final List<MetricPoint> stressPoints   = results[4];
 
+      // DEBUG: stampiamo i dati grezzi per verificare cosa arriva dall'API
+      print('HOME DEBUG sleep    -> ${sleepPoints.length} punti: '
+          '${sleepPoints.map((p) => "${p.fullLabel}=${p.value}").toList()}');
+      print('HOME DEBUG steps    -> ${stepsPoints.length} punti: '
+          '${stepsPoints.map((p) => "${p.fullLabel}=${p.value}").toList()}');
+      print('HOME DEBUG calories -> ${caloriesPoints.length} punti: '
+          '${caloriesPoints.map((p) => "${p.fullLabel}=${p.value}").toList()}');
+      print('HOME DEBUG distance -> ${distancePoints.length} punti: '
+          '${distancePoints.map((p) => "${p.fullLabel}=${p.value}").toList()}');
+      print('HOME DEBUG stress   -> ${stressPoints.length} punti: '
+          '${stressPoints.map((p) => "${p.fullLabel}=${p.value}").toList()}');
+
       // ── PERCHÉ sommiamo i valori? ─────────────────────────────────────────
       //
-      // fetchSingleDayMetric restituisce i dati "grezzi" intraday:
+      // fetchSingleDayMetric restituisce i punti intraday grezzi:
       // - steps:    ogni punto = passi fatti in quell'intervallo di tempo
       // - calories: ogni punto = calorie bruciate in quell'intervallo
       // - distance: ogni punto = distanza percorsa in quell'intervallo (in cm)
@@ -136,7 +179,6 @@ class _HomeScreenState extends State<HomeScreen> {
       //
       // Il sonno è diverso: fetchSingleDayMetric per 'sleep' restituisce
       // già un singolo punto con le ore totali → prendiamo solo .first.value
-      
       double sumValues(List<MetricPoint> points) => points.isEmpty
           ? 0.0
           : points.map((p) => p.value).reduce((a, b) => a + b);
@@ -146,7 +188,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _steps       = sumValues(stepsPoints);
         _calories    = sumValues(caloriesPoints);
 
-        // La distanza arriva in cm dall'API (vedi Appendix slide 48).
+        // La distance arriva in cm dall'API (vedi Appendix slide 48).
         // Dividiamo per 100.000 per convertire in km.
         // Esempio: 850.000 cm → 8.5 km
         _distanceKm  = distancePoints.isNotEmpty
@@ -169,6 +211,11 @@ class _HomeScreenState extends State<HomeScreen> {
         if (noDataAtAll) _dailyErrorMessage = 'no_data';
       });
 
+      // Segnaliamo a MainWrapper che la Home ha finito: solo ora può
+      // partire in sicurezza l'eventuale prefetch dell'archivio, senza
+      // sommarsi alle richieste appena concluse.
+      widget.onDailyDataLoaded?.call();
+
     } catch (e, stack) {
       print('HOME DEBUG ERROR durante _loadDailyData: $e');
       print(stack);
@@ -177,11 +224,15 @@ class _HomeScreenState extends State<HomeScreen> {
         _isLoadingDaily    = false;
         _dailyErrorMessage = 'error';
       });
+      // Anche in caso di errore notifichiamo il completamento: il prefetch
+      // non deve restare bloccato per sempre se la Home fallisce, e le
+      // chiamate getOrFetch* hanno comunque la loro gestione d'errore.
+      widget.onDailyDataLoaded?.call();
     }
   }
 
   // Restituisce il colore del blob/testo in base al livello di stress.
-  // forText: true → colore per testo (più scuro in light, più chiaro in dark)
+  // forText: true  → colore per testo (più scuro in light, più chiaro in dark)
   // forText: false → colore per il blob di sfondo (semi-trasparente)
   Color _getStressColor(int level, {bool forText = false}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -266,8 +317,11 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: SafeArea(
         child: RefreshIndicator(
-          // Pull-to-refresh: ricarica i dati del giorno corrente
-          onRefresh: _loadDailyData,
+          // Pull-to-refresh: ricarica i dati del giorno corrente E il report
+          onRefresh: () => Future.wait([
+            _loadDailyData(),
+            _loadWeeklyReport(forceRefresh: true),
+          ]),
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: Padding(
@@ -311,7 +365,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             child: Center(
                               // Mentre carichiamo mostriamo uno spinner,
-                              // poi mostriamo il numero 0-100
+                              // poi il numero 0-100 dell'indice di stress
                               child: _isLoadingDaily
                                   ? SizedBox(
                                       width: 28,
@@ -336,6 +390,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       const SizedBox(height: 24),
+                      // Etichetta testuale del livello di stress
                       Text(
                         _isLoadingDaily
                             ? (isItalian ? 'Sincronizzazione…' : 'Syncing…')
@@ -479,10 +534,44 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildLastReportCard(BuildContext context, bool isItalian) {
     final colorScheme = Theme.of(context).colorScheme;
-    // Leggiamo il report dall'ultimo WeeklyReport caricato dal DataProvider
+    // Leggiamo il report dalla cache condivisa del DataProvider.
+    // _loadWeeklyReport() (chiamato in initState e nel pull-to-refresh)
+    // garantisce che venga effettivamente calcolato/aggiornato, non solo
+    // letto passivamente come prima.
     final report = context.watch<DataProvider>().lastWeeklyReport;
 
-    // Placeholder se il report non è ancora stato caricato
+    // Placeholder mentre carica (e non c'è ancora nulla in cache)
+    if (_isLoadingReport && report == null) {
+      return Material(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(24),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  isItalian ? 'Caricamento ultimo report…' : 'Loading latest report…',
+                  style: TextStyle(
+                      fontSize: 15, color: colorScheme.onSurfaceVariant),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Placeholder se il report non è ancora stato caricato o non ha dati
     if (report == null || !report.hasData) {
       return Material(
         color: colorScheme.surfaceContainerLow,

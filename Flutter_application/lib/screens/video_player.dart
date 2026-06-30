@@ -4,7 +4,7 @@ import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart' as mobile;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_application/providers/settings_provider.dart'; 
+import 'package:flutter_application/providers/settings_provider.dart';
 import '../data/video_archive.dart';
 
 class VideoPlayerScreen extends StatefulWidget {
@@ -19,6 +19,17 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   YoutubePlayerController? _webController;
   mobile.YoutubePlayerController? _mobileController;
 
+  // ── NOTA SUL FIX ───────────────────────────────────────────────────────
+  // PRIMA: nessuno stava ad ascoltare se il video fosse arrivato alla
+  // fine, quindi una volta terminato l'utente restava bloccato sulla
+  // schermata finché non premeva manualmente "Termina Pausa".
+  //
+  // FIX: ascoltiamo lo stato del player (sia su mobile che su web) e,
+  // quando passa a "ended", mostriamo un piccolo messaggio di
+  // completamento e cambiamo il bottone in "Fatto ✓" — restiamo comunque
+  // sulla schermata, è l'utente a decidere quando uscire (scelta (b)).
+  bool _videoEnded = false;
+
   @override
   void initState() {
     super.initState();
@@ -28,11 +39,29 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         autoPlay: true,
         params: const YoutubePlayerParams(mute: false),
       );
+      // youtube_player_iframe espone lo stato del player come stream:
+      // ci iscriviamo per intercettare il passaggio a PlayerState.ended.
+      _webController!.listen((value) {
+        if (!_videoEnded && value.playerState == PlayerState.ended) {
+          if (mounted) setState(() => _videoEnded = true);
+        }
+      });
     } else {
       _mobileController = mobile.YoutubePlayerController(
         initialVideoId: widget.video.youtubeId,
         flags: const mobile.YoutubePlayerFlags(autoPlay: true),
       );
+      // youtube_player_flutter espone lo stato tramite il
+      // ValueListenable del controller stesso: aggiungiamo un listener
+      // dedicato per intercettare PlayerState.ended.
+      _mobileController!.addListener(_onMobilePlayerStateChanged);
+    }
+  }
+
+  void _onMobilePlayerStateChanged() {
+    if (_videoEnded) return;
+    if (_mobileController!.value.playerState == mobile.PlayerState.ended) {
+      if (mounted) setState(() => _videoEnded = true);
     }
   }
 
@@ -65,6 +94,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
+              _buildCompletionBanner(context, isItalian),
               const SizedBox(height: 32),
               ElevatedButton.icon(
                 onPressed: () {
@@ -81,14 +111,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              OutlinedButton(
-                onPressed: () => Navigator.pop(context),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 60),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                ),
-                child: Text(isItalian ? "Termina Pausa" : "End Break"),
-              ),
+              _buildEndButton(context, isItalian),
             ],
           ),
         ),
@@ -116,7 +139,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                     child: Column(
                       children: [
                         Text(
-                          isItalian ? "Continua così!" : "Keep it up!",
+                          _videoEnded
+                              ? (isItalian ? "Esercizio completato!" : "Exercise completed!")
+                              : (isItalian ? "Continua così!" : "Keep it up!"),
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
@@ -125,15 +150,40 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          isItalian ? "Respira e segui i movimenti con calma" : "Breathe and follow the movements calmly",
+                          _videoEnded
+                              ? (isItalian
+                                  ? "Ottimo lavoro, la tua pausa attiva è finita"
+                                  : "Great job, your active break is over")
+                              : (isItalian
+                                  ? "Respira e segui i movimenti con calma"
+                                  : "Breathe and follow the movements calmly"),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 40),
 
-                        // ── TIMER CIRCOLARE ──
+                        // ── TIMER CIRCOLARE / CHECK DI COMPLETAMENTO ──
                         ValueListenableBuilder<mobile.YoutubePlayerValue>(
                           valueListenable: _mobileController!,
                           builder: (context, value, child) {
+                            if (_videoEnded) {
+                              // A fine video mostriamo una spunta invece
+                              // del countdown, che a 0:00 risulterebbe
+                              // un po' anonimo.
+                              return Container(
+                                width: 130,
+                                height: 130,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: colorScheme.primaryContainer,
+                                ),
+                                child: Icon(
+                                  Icons.check_rounded,
+                                  size: 64,
+                                  color: colorScheme.onPrimaryContainer,
+                                ),
+                              );
+                            }
+
                             final duration = value.metaData.duration.inSeconds;
                             final position = value.position.inSeconds;
                             final progress = (duration > 0) ? (position / duration) : 0.0;
@@ -167,14 +217,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                         ),
 
                         const SizedBox(height: 40),
-                        OutlinedButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(double.infinity, 60),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                          ),
-                          child: Text(isItalian ? "Termina Pausa" : "End Break"),
-                        ),
+                        _buildEndButton(context, isItalian),
                       ],
                     ),
                   ),
@@ -187,8 +230,67 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     );
   }
 
+  // Banner mostrato solo nel ramo web a fine video (il ramo mobile ha già
+  // un suo testo dedicato sopra al timer, vedi build() più in alto).
+  Widget _buildCompletionBanner(BuildContext context, bool isItalian) {
+    if (!_videoEnded) return const SizedBox(height: 32);
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.check_circle_rounded, color: colorScheme.primary, size: 22),
+          const SizedBox(width: 8),
+          Text(
+            isItalian ? "Esercizio completato!" : "Exercise completed!",
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: colorScheme.primary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Bottone finale: "Termina Pausa" durante la riproduzione,
+  // "Fatto ✓" (in evidenza) una volta che il video è terminato —
+  // resta comunque l'utente a decidere quando lasciare la schermata.
+  Widget _buildEndButton(BuildContext context, bool isItalian) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    if (_videoEnded) {
+      return FilledButton.icon(
+        onPressed: () => Navigator.pop(context),
+        icon: const Icon(Icons.check_rounded),
+        label: Text(
+          isItalian ? "Fatto" : "Done",
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(double.infinity, 60),
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        ),
+      );
+    }
+
+    return OutlinedButton(
+      onPressed: () => Navigator.pop(context),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(double.infinity, 60),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      ),
+      child: Text(isItalian ? "Termina Pausa" : "End Break"),
+    );
+  }
+
   @override
   void dispose() {
+    _mobileController?.removeListener(_onMobilePlayerStateChanged);
     _webController?.close();
     _mobileController?.dispose();
     super.dispose();

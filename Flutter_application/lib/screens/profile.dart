@@ -7,7 +7,6 @@ import 'package:flutter_application/providers/userdata_provider.dart';
 import 'package:flutter_application/providers/settings_provider.dart';
 import 'package:flutter_application/providers/data_provider.dart';
 import 'package:flutter_application/utils/weekly_report_model.dart';
-import 'package:flutter_application/services/weekly_report_builder.dart';
 import 'package:flutter_application/screens/dati_personali.dart';
 import 'package:flutter_application/screens/impostazioni.dart';
 import 'report_archivio.dart';
@@ -21,8 +20,16 @@ class Profile extends StatefulWidget {
 }
 
 class _ProfileState extends State<Profile> {
-  WeeklyReport? _ultimoReport;
+  // ── NOTA SUL FIX ───────────────────────────────────────────────────────
+  // Prima questa schermata teneva il report in uno stato locale (_ultimoReport)
+  // calcolato in autonomia, senza nessun legame con DataProvider. Risultato:
+  // - la Home (che leggeva dataProvider.lastWeeklyReport) non vedeva mai
+  //   questo report, perché non veniva mai scritto lì
+  // - l'Archivio ricalcolava la stessa identica settimana da capo
+  // Ora deleghiamo tutto a DataProvider.getOrFetchLatestReport(), che
+  // calcola una sola volta e condivide il risultato con tutte le schermate.
   bool _isLoadingReport = true;
+  String? _errorMessage;
 
   // Variabili per il "fermo immagine" dei goal
   int? _lastSteps;
@@ -35,32 +42,26 @@ class _ProfileState extends State<Profile> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadUltimoReport());
   }
 
-  Future<void> _loadUltimoReport() async {
+  Future<void> _loadUltimoReport({bool forceRefresh = false}) async {
     if (!mounted) return;
 
     setState(() {
       _isLoadingReport = true;
+      _errorMessage = null;
     });
-    
+
     final dataProvider = context.read<DataProvider>();
     final settings     = context.read<SettingsProvider>();
 
-    // Ultima settimana: 7 giorni fino al 26-06-2026
-    final ranges = WeeklyReportBuilder.buildWeekRanges(weekCount: 1);
-    final range  = ranges.first;
-
     try {
-      final report = await WeeklyReportBuilder.build(
-        dataProvider:    dataProvider,
-        weekStart:       range.start,
-        weekEnd:         range.end,
+      await dataProvider.getOrFetchLatestReport(
         stepsGoalTarget: settings.steps,
         sleepGoalHours:  settings.sleepHours.toDouble(),
         goalsEnabled:    settings.customGoalsEnabled,
+        forceRefresh:    forceRefresh,
       );
       if (!mounted) return;
       setState(() {
-        _ultimoReport    = report;
         _isLoadingReport = false;
 
         // Salviamo i goal utilizzati per questo calcolo
@@ -68,9 +69,12 @@ class _ProfileState extends State<Profile> {
         _lastSleep        = settings.sleepHours.toDouble();
         _lastGoalsEnabled = settings.customGoalsEnabled;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
-      setState(() => _isLoadingReport = false);
+      setState(() {
+        _isLoadingReport = false;
+        _errorMessage = 'error';
+      });
     }
   }
 
@@ -135,6 +139,11 @@ class _ProfileState extends State<Profile> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isItalian   = context.watch<SettingsProvider>().isItalian;
+
+    // Leggiamo il report dalla cache condivisa: se un'altra schermata
+    // (es. la Home) lo ha già caricato/aggiornato, lo vediamo qui subito,
+    // senza dover rifare la chiamata di rete.
+    final report = context.watch<DataProvider>().lastWeeklyReport;
 
     return Scaffold(
       appBar: AppBar(
@@ -223,7 +232,7 @@ class _ProfileState extends State<Profile> {
               // ── Card ultimo report ───────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _buildReportCard(context, isItalian, colorScheme),
+                child: _buildReportCard(context, isItalian, colorScheme, report),
               ),
 
               const SizedBox(height: 28),
@@ -297,16 +306,19 @@ class _ProfileState extends State<Profile> {
 
                           // 2. Leggiamo i valori attuali dopo il ritorno
                           final settings = context.read<SettingsProvider>();
-                          
+
                           // 3. Verifichiamo se l'utente ha modificato i goal
-                          final haCambiatoQualcosa = 
+                          final haCambiatoQualcosa =
                               _lastSteps != settings.steps ||
                               _lastSleep != settings.sleepHours.toDouble() ||
                               _lastGoalsEnabled != settings.customGoalsEnabled;
-                          
-                          // 4. Ricarichiamo SOLO se ci sono stati cambiamenti
+
+                          // 4. Ricarichiamo SOLO se ci sono stati cambiamenti.
+                          // Invalidiamo anche la cache condivisa (Home/Archivio
+                          // dipendono dagli stessi goal) e forziamo un refresh.
                           if (haCambiatoQualcosa) {
-                            _loadUltimoReport();
+                            context.read<DataProvider>().clearArchiveCache();
+                            _loadUltimoReport(forceRefresh: true);
                           }
                         },
                       ),
@@ -331,11 +343,11 @@ class _ProfileState extends State<Profile> {
     );
   }
 
-  // ── Card ultimo report: loading / no data / dati reali ───────────────────
+  // ── Card ultimo report: loading / errore / no data / dati reali ──────────
 
-  Widget _buildReportCard(
-      BuildContext context, bool isItalian, ColorScheme colorScheme) {
-    if (_isLoadingReport) {
+  Widget _buildReportCard(BuildContext context, bool isItalian,
+      ColorScheme colorScheme, WeeklyReport? report) {
+    if (_isLoadingReport && report == null) {
       return Container(
         height: 120,
         decoration: BoxDecoration(
@@ -346,7 +358,36 @@ class _ProfileState extends State<Profile> {
       );
     }
 
-    if (_ultimoReport == null || !_ultimoReport!.hasData) {
+    if (_errorMessage != null && report == null) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.wifi_off_rounded,
+                color: colorScheme.error, size: 32),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                isItalian
+                    ? 'Errore di sincronizzazione, riprova.'
+                    : 'Sync error, please retry.',
+                style: TextStyle(color: colorScheme.error, fontSize: 15),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () => _loadUltimoReport(forceRefresh: true),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (report == null || !report.hasData) {
       return Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
@@ -372,7 +413,7 @@ class _ProfileState extends State<Profile> {
       );
     }
 
-    final r           = _ultimoReport!;
+    final r           = report;
     final fg          = _fgColor(r, context);
     final bg          = _bgColor(r, context);
     final worstStress = r.dailyStress.isNotEmpty
