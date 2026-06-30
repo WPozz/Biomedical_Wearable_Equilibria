@@ -501,12 +501,19 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        // Riga 2: Distanza al posto delle Calorie (non disponibili) e
-        // card "ultimo report" in versione compatta al posto della
-        // vecchia card distanza
         Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Expanded(
+              child: _buildMetricCard(
+                context,
+                isItalian ? "Calorie" : "Calories",
+                _isLoadingDaily ? '—' : '${_calories.round()} kcal',
+                Icons.local_fire_department,
+                colorScheme.tertiary,
+                0.0, // nessun progress circolare per calorie
+              ),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: _buildMetricCard(
                 context,
@@ -517,19 +524,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 0.0, // nessun progress circolare per distanza
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildLastReportCard(context, isItalian),
-            ),
           ],
         ),
+        const SizedBox(height: 12),
+        _buildLastReportCard(context, isItalian),
       ],
     );
   }
 
-  // Versione compatta della card "ultimo report", pensata per stare
-  // affiancata alle altre metriche nella griglia 2x2 (al posto della
-  // vecchia card "Distanza")
   Widget _buildLastReportCard(BuildContext context, bool isItalian) {
     final colorScheme = Theme.of(context).colorScheme;
     // Leggiamo il report dalla cache condivisa del DataProvider.
@@ -548,21 +550,19 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Row(
             children: [
               SizedBox(
-                width: 16,
-                height: 16,
+                width: 18,
+                height: 18,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   color: colorScheme.onSurfaceVariant,
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 14),
               Expanded(
                 child: Text(
-                  isItalian ? 'Report…' : 'Report…',
+                  isItalian ? 'Caricamento ultimo report…' : 'Loading latest report…',
                   style: TextStyle(
                       fontSize: 15, color: colorScheme.onSurfaceVariant),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -578,21 +578,28 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(24),
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
               Expanded(
-                child: Text(
-                  isItalian ? 'Ultimo report' : 'Latest report',
-                  style: TextStyle(
-                      fontSize: 15, color: colorScheme.onSurfaceVariant),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isItalian ? 'Ultimo report' : 'Latest report',
+                      style: TextStyle(
+                          fontSize: 15, color: colorScheme.onSurfaceVariant),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      isItalian ? 'Non ancora disponibile' : 'Not yet available',
+                      style: TextStyle(
+                          fontSize: 15, color: colorScheme.onSurfaceVariant),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 4),
               Icon(Icons.analytics_rounded,
-                  color: colorScheme.onSurfaceVariant, size: 20),
+                  color: colorScheme.onSurfaceVariant, size: 28),
             ],
           ),
         ),
@@ -601,6 +608,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final Color perfColor  = _perfColor(report.performance, colorScheme);
     final String evalLabel = isItalian ? report.evaluationIt : report.evaluationEn;
+    final String dateLabel = isItalian ? report.dateRangeIt  : report.dateRangeEn;
 
     return Material(
       color: colorScheme.surfaceContainerLow,
@@ -615,40 +623,37 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(24),
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Text(
-                isItalian ? 'Ultimo report' : 'Latest report',
-                style: TextStyle(
-                    fontSize: 13, color: colorScheme.onSurfaceVariant),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isItalian
+                          ? 'Ultimo report · $dateLabel'
+                          : 'Latest report · $dateLabel',
+                      style: TextStyle(
+                          fontSize: 13, color: colorScheme.onSurfaceVariant),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$evalLabel · Stress ${report.avgStressIndex.toStringAsFixed(0)}/100',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: perfColor),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                evalLabel,
-                style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: perfColor),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Stress ${report.avgStressIndex.toStringAsFixed(0)}/100',
-                style: TextStyle(
-                    fontSize: 13, color: colorScheme.onSurfaceVariant),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const Spacer(),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Icon(Icons.chevron_right_rounded,
-                    color: colorScheme.onSurfaceVariant, size: 20),
-              ),
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right_rounded,
+                  color: colorScheme.onSurfaceVariant, size: 22),
             ],
           ),
         ),
