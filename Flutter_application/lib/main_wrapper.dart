@@ -32,7 +32,10 @@ class _MainWrapperState extends State<MainWrapper> {
     super.initState();
     // Avvia il prefetch in background subito dopo il login.
     // Non blocca la UI — popola la cache silenziosamente.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _prefetchReports());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Aspetta 8 secondi che la home finisca di caricare i dati del giorno
+      Future.delayed(const Duration(seconds: 8), _prefetchReports);
+    });
   }
 
   Future<void> _prefetchReports() async {

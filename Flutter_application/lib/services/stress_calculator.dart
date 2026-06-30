@@ -16,7 +16,7 @@ class DailyRawData {
 }
 
 abstract class StressCalculator {
-  static const double _baseStress = 40.0;
+  static const double _baseStress = 35.0;
 
   // Sonno mancante o cattivo 
   static const double _idealSleepHours = 8.0;
@@ -58,7 +58,7 @@ abstract class StressCalculator {
   static const double _maxHrDiscount = 0.6;
 
   static const double _activityReliefPer1000Steps = 0.6;
-  static const double _maxStepsRelief = 8.0;
+  static const double _maxStepsRelief = 9.0;
   // Limite massimo di punti di stress che puoi farti scalare semplicemente camminando.
 
   static const Map<String, double> _trimpZoneWeights = {
@@ -68,7 +68,7 @@ abstract class StressCalculator {
     'peak': 4.0,
   };
 
-  static const double _trimpToReliefScale = 0.12;
+  static const double _trimpToReliefScale = 0.13;
   static const double _maxExerciseRelief = 15.0;
 
   static double _calculateDailyTrimp(Map<String, double> zoneMinutes) {

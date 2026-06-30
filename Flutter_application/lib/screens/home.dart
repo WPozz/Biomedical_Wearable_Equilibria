@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:provider/provider.dart';
 import 'package:flutter_application/providers/settings_provider.dart';
 import 'package:flutter_application/providers/data_provider.dart';
-import 'package:flutter_application/models/metric_point.dart'; // ← aggiunto: serve per tipizzare esplicitamente List<MetricPoint>
+import 'package:flutter_application/models/metric_point.dart';
 import 'package:flutter_application/utils/weekly_report_model.dart';
 import 'package:flutter_application/services/weekly_report_builder.dart';
 import 'package:flutter_application/screens/pausa_attiva.dart';
@@ -47,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     // kArchiveEnd è il 21 giugno 2026 (ultimo giorno dell'archivio Fitbit).
-    // Il giorno che mostriamo in home è il 22 giugno:
+    // Mostriamo il 22 giugno perché:
     // - i dati di attività (steps, calories, distance) sono stati registrati il 22
     // - il sonno del 22 è la notte tra il 21 e il 22, che il Fitbit associa
     //   alla data di sveglia (22 giugno) → esiste nell'API
@@ -84,27 +84,16 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       // ── PERCHÉ fetchSingleDayMetric e non fetchMetricRange? ───────────────
       //
-      // Il DataProvider espone due metodi per ottenere dati:
+      // fetchMetricRange chiama /daterange/start_date/.../end_date/
+      // → funziona bene per range di 7+ giorni (grafici settimanali)
+      // → restituisce lista VUOTA quando start == end (un solo giorno)
       //
-      // 1. fetchMetricRange(metric, startDate, endDate)
-      //    → chiama l'endpoint: /daterange/start_date/.../end_date/.../
-      //    → aggrega i dati giorno per giorno e restituisce un MetricPoint
-      //      per ogni giorno (con il valore già sommato o mediato)
-      //    → funziona bene per range di 7+ giorni (es. grafici settimanali)
-      //    → PROBLEMA: quando startDate == endDate (un solo giorno),
-      //      l'API /daterange/ restituisce lista vuota → nessun dato
+      // fetchSingleDayMetric chiama /day/<data>/
+      // → corretto per un singolo giorno, restituisce punti intraday
+      // → è l'endpoint giusto per la home che mostra sempre "oggi"
       //
-      // 2. fetchSingleDayMetric(metric, day)
-      //    → chiama l'endpoint: /day/<date>/
-      //    → restituisce tutti i punti intraday della giornata
-      //      (per steps/calories/distance: un punto ogni minuto)
-      //    → funziona correttamente anche per un singolo giorno
-      //    → è l'endpoint giusto per la home, che mostra sempre "oggi"
-      //
-      // La scelta corretta per la home è quindi fetchSingleDayMetric.
-      // Lanciamo tutte e 5 le fetch in parallelo con Future.wait per
+      // Lanciamo tutte le fetch in parallelo con Future.wait per
       // minimizzare il tempo di attesa totale.
-
       final results = await Future.wait([
         dataProvider.fetchSingleDayMetric('sleep',    _syncedDayStr),
         dataProvider.fetchSingleDayMetric('steps',    _syncedDayStr),
@@ -123,9 +112,21 @@ class _HomeScreenState extends State<HomeScreen> {
       final List<MetricPoint> distancePoints = results[3];
       final List<MetricPoint> stressPoints   = results[4];
 
+      // DEBUG: stampiamo i dati grezzi per verificare cosa arriva dall'API
+      print('HOME DEBUG sleep    -> ${sleepPoints.length} punti: '
+          '${sleepPoints.map((p) => "${p.fullLabel}=${p.value}").toList()}');
+      print('HOME DEBUG steps    -> ${stepsPoints.length} punti: '
+          '${stepsPoints.map((p) => "${p.fullLabel}=${p.value}").toList()}');
+      print('HOME DEBUG calories -> ${caloriesPoints.length} punti: '
+          '${caloriesPoints.map((p) => "${p.fullLabel}=${p.value}").toList()}');
+      print('HOME DEBUG distance -> ${distancePoints.length} punti: '
+          '${distancePoints.map((p) => "${p.fullLabel}=${p.value}").toList()}');
+      print('HOME DEBUG stress   -> ${stressPoints.length} punti: '
+          '${stressPoints.map((p) => "${p.fullLabel}=${p.value}").toList()}');
+
       // ── PERCHÉ sommiamo i valori? ─────────────────────────────────────────
       //
-      // fetchSingleDayMetric restituisce i dati "grezzi" intraday:
+      // fetchSingleDayMetric restituisce i punti intraday grezzi:
       // - steps:    ogni punto = passi fatti in quell'intervallo di tempo
       // - calories: ogni punto = calorie bruciate in quell'intervallo
       // - distance: ogni punto = distanza percorsa in quell'intervallo (in cm)
@@ -136,7 +137,6 @@ class _HomeScreenState extends State<HomeScreen> {
       //
       // Il sonno è diverso: fetchSingleDayMetric per 'sleep' restituisce
       // già un singolo punto con le ore totali → prendiamo solo .first.value
-      
       double sumValues(List<MetricPoint> points) => points.isEmpty
           ? 0.0
           : points.map((p) => p.value).reduce((a, b) => a + b);
@@ -146,7 +146,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _steps       = sumValues(stepsPoints);
         _calories    = sumValues(caloriesPoints);
 
-        // La distanza arriva in cm dall'API (vedi Appendix slide 48).
+        // La distance arriva in cm dall'API (vedi Appendix slide 48).
         // Dividiamo per 100.000 per convertire in km.
         // Esempio: 850.000 cm → 8.5 km
         _distanceKm  = distancePoints.isNotEmpty
@@ -181,7 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Restituisce il colore del blob/testo in base al livello di stress.
-  // forText: true → colore per testo (più scuro in light, più chiaro in dark)
+  // forText: true  → colore per testo (più scuro in light, più chiaro in dark)
   // forText: false → colore per il blob di sfondo (semi-trasparente)
   Color _getStressColor(int level, {bool forText = false}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -311,7 +311,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             child: Center(
                               // Mentre carichiamo mostriamo uno spinner,
-                              // poi mostriamo il numero 0-100
+                              // poi il numero 0-100 dell'indice di stress
                               child: _isLoadingDaily
                                   ? SizedBox(
                                       width: 28,
@@ -336,6 +336,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       const SizedBox(height: 24),
+                      // Etichetta testuale del livello di stress
                       Text(
                         _isLoadingDaily
                             ? (isItalian ? 'Sincronizzazione…' : 'Syncing…')
