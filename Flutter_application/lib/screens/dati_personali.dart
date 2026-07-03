@@ -168,13 +168,8 @@ class _DatiPersonaliScreenState extends State<DatiPersonaliScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  isItalian 
-                    ? "Compila i campi per personalizzare i tuoi esercizi." 
-                    : "Fill out the fields to customize your exercises.",
-                  style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 16),
-                ),
-                const SizedBox(height: 30),
+                
+                const SizedBox(height: 20),
 
                 Row(
                   children: [
