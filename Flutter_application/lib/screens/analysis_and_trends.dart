@@ -1,25 +1,13 @@
-// lib/screens/analysis_and_trends.dart
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
+import 'dart:io';
+
 import '../providers/data_provider.dart';
 import '../models/metric_point.dart';
-import 'dart:io';
 import '../providers/userdata_provider.dart';
-import 'package:flutter_application/services/weekly_report_builder.dart';
-
-// In postman:
-// New request (POST request)
-// https://---// documento di cappon con token
-// In the body, we select the format (FOR data), we have to use username and password.
-// values are "username": "----", "password": "12345678!"
-// We send the request and we have the token (with access and refresh).
-// If something goes wrong we get 401 or 403, if it works we get 200 and the token.
-
-// NOTE: questo screen non importa StressCalculator direttamente.
-// Tutta la logica di calcolo stress passa per DataProvider → StressCalculator.
-// Se in futuro vuoi mostrare un breakdown dello stress su questo screen,
-// puoi importare StressCalculator qui senza toccare il provider.
+import '../services/weekly_report_builder.dart';
+import '../providers/settings_provider.dart';
 
 extension SemanticRoles on ColorScheme {
   Color get highlight => primary;
@@ -41,20 +29,27 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
   int _selectedMetricIndex = 0;
   _TrendPeriod _selectedPeriod = _TrendPeriod.week;
   int _windowOffset = 0;
-
   int? _highlightedPointIndex;
 
   bool _isLoading = false;
   String? _errorMessage;
   String _windowLabel = '';
   List<MetricPoint> _currentPoints = const [];
-  final Map<String, List<MetricPoint>> _metricCache = {};
-  final Map<String, String> _labelCache = {};
 
   _MetricDefinition get _selectedMetric => _metricCatalog[_selectedMetricIndex];
 
-  bool get _canGoToPreviousWindow => _windowOffset > -2;
+  int get _minOffset {
+    switch (_selectedPeriod) {
+      case _TrendPeriod.day:
+        return -60; 
+      case _TrendPeriod.week:
+        return -8;  
+      case _TrendPeriod.month:
+        return -6;  
+    }
+  }
 
+  bool get _canGoToPreviousWindow => _windowOffset > _minOffset;
   bool get _canGoToNextWindow => _windowOffset < 0;
 
   String get _cacheKey => _makeCacheKey(
@@ -72,7 +67,6 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
   void _selectMetric(int index) {
     setState(() {
       _selectedMetricIndex = index;
-      _windowOffset = 0;
       _highlightedPointIndex = null;
     });
     _loadMetricData();
@@ -80,7 +74,6 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
 
   void _selectPeriod(_TrendPeriod period) {
     if (_selectedPeriod == period) return;
-
     setState(() {
       _selectedPeriod = period;
       _windowOffset = 0;
@@ -91,8 +84,8 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
 
   void _moveWindow(int delta) {
     final int candidate = _windowOffset + delta;
-    if (candidate < -2 || candidate > 2) return;
-
+    if (candidate < _minOffset || candidate > 0) return;
+    
     setState(() {
       _windowOffset = candidate;
       _highlightedPointIndex = null;
@@ -112,8 +105,8 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
   }
 
   _DateRange _getDateRange(_TrendPeriod period, int offset) {
-    // Ancora = ieri (l'API non accetta end_date >= oggi)
-    final DateTime yesterday = WeeklyReportBuilder.kArchiveEnd;
+    final DateTime yesterday = WeeklyReportBuilder.kArchiveEnd.add(const Duration(days: 1));
+
     switch (period) {
       case _TrendPeriod.day:
         final DateTime baseDay = yesterday.add(Duration(days: offset));
@@ -124,10 +117,8 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
         );
 
       case _TrendPeriod.week:
-        final DateTime baseEnd =
-            yesterday.add(Duration(days: offset * 7));
-        final DateTime baseStart =
-            baseEnd.subtract(const Duration(days: 6));
+        final DateTime baseEnd = yesterday.add(Duration(days: offset * 7));
+        final DateTime baseStart = baseEnd.subtract(const Duration(days: 6));
         return _DateRange(
           start: _formatDate(baseStart),
           end: _formatDate(baseEnd),
@@ -135,10 +126,8 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
         );
 
       case _TrendPeriod.month:
-        final DateTime baseEnd =
-            yesterday.add(Duration(days: offset * 7));
-        final DateTime baseStart =
-            baseEnd.subtract(const Duration(days: 6));
+        final DateTime baseEnd = yesterday.add(Duration(days: offset * 28));
+        final DateTime baseStart = baseEnd.subtract(const Duration(days: 27));
         return _DateRange(
           start: _formatDate(baseStart),
           end: _formatDate(baseEnd),
@@ -147,9 +136,30 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
     }
   }
 
+  // La funzione stabile con il fold per i passi
+  double? _getSummaryValue(List<MetricPoint> pts, String metricId, _TrendPeriod period) {
+    if (pts.isEmpty) return null;
+    
+    if (period == _TrendPeriod.day) {
+      if (metricId == 'steps') {
+        return pts.fold<double>(0.0, (double sum, p) => sum + p.value); 
+      } else if (metricId == 'heart_rate') {
+        return pts.fold<double>(0.0, (double sum, p) => sum + p.value) / pts.length; 
+      } else {
+        return pts.first.value; 
+      }
+    } else {
+      if (metricId == 'heart_rate') {
+        return pts.fold<double>(0.0, (double sum, p) => sum + p.value) / pts.length; 
+      }
+      return pts.last.value; 
+    }
+  }
+
   Future<void> _loadMetricData() async {
     final _DateRange range = _getDateRange(_selectedPeriod, _windowOffset);
     final String cacheKey = _cacheKey;
+    final provider = context.read<DataProvider>();
 
     setState(() {
       _isLoading = true;
@@ -157,10 +167,18 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
       _highlightedPointIndex = null;
     });
 
-    try {
-      final provider = context.read<DataProvider>();
-      List<MetricPoint> data;
+    if (provider.trendCache.containsKey(cacheKey)) {
+      setState(() {
+        _isLoading = false;
+        _currentPoints = provider.trendCache[cacheKey]!;
+        _windowLabel = provider.trendLabelCache[cacheKey] ?? range.label;
+      });
+      _preloadOtherMetrics();
+      return;
+    }
 
+    try {
+      List<MetricPoint> data;
       if (_selectedPeriod == _TrendPeriod.day) {
         if (_selectedMetric.apiMetric == 'stress') {
           data = await provider.fetchCalculatedStressSingleDay(range.start);
@@ -184,22 +202,22 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
         _isLoading = false;
         _currentPoints = data;
         _windowLabel = range.label;
-        _metricCache[cacheKey] = data;
-        _labelCache[cacheKey] = range.label;
+        
+        provider.trendCache[cacheKey] = data;
+        provider.trendLabelCache[cacheKey] = range.label;
+        
         if (data.isEmpty) _errorMessage = 'No data found for this period.';
       });
 
       _preloadOtherMetrics();
-    } catch (e, stack) {
-      print('_loadMetricData ERROR: $e');
+    } catch (e) {
       if (!mounted) return;
 
       String friendlyMessage = 'Oops! We cannot load your data right now.';
       IconData errorIcon = Icons.error_outline;
 
       if (e is SocketException) {
-        friendlyMessage =
-            'You appear to be offline. Please check your connection.';
+        friendlyMessage = 'offline';
         errorIcon = Icons.wifi_off;
       }
 
@@ -210,29 +228,31 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
         _errorMessage = friendlyMessage;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(errorIcon, color: Theme.of(context).colorScheme.onError),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  friendlyMessage,
-                  style: TextStyle(
-                      color: Theme.of(context).colorScheme.onError),
+      if (e is SocketException) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(errorIcon, color: Theme.of(context).colorScheme.onError),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'You appear to be offline. Please check your connection.',
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onError),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.only(bottom: 20, left: 16, right: 16),
+            duration: const Duration(seconds: 4),
           ),
-          backgroundColor: Theme.of(context).colorScheme.error,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin: const EdgeInsets.only(bottom: 20, left: 16, right: 16),
-          duration: const Duration(seconds: 4),
-        ),
-      );
+        );
+      }
     }
   }
 
@@ -247,40 +267,32 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
       final String cacheKey =
           _makeCacheKey(metric.apiMetric, _selectedPeriod, _windowOffset);
 
-      if (_metricCache.containsKey(cacheKey)) continue;
+      if (provider.trendCache.containsKey(cacheKey)) continue;
 
       try {
         List<MetricPoint> data;
-
         if (_selectedPeriod == _TrendPeriod.day) {
           if (metric.apiMetric == 'stress') {
-            data =
-                await provider.fetchCalculatedStressSingleDay(range.start);
+            data = await provider.fetchCalculatedStressSingleDay(range.start);
           } else {
-            data = await provider.fetchSingleDayMetric(
-                metric.apiMetric, range.start);
+            data = await provider.fetchSingleDayMetric(metric.apiMetric, range.start);
           }
         } else {
           if (metric.apiMetric == 'stress') {
-            data = await provider.fetchCalculatedStressRange(
-                range.start, range.end);
+            data = await provider.fetchCalculatedStressRange(range.start, range.end);
           } else {
-            data = await provider.fetchMetricRange(
-                metric.apiMetric, range.start, range.end);
+            data = await provider.fetchMetricRange(metric.apiMetric, range.start, range.end);
           }
         }
 
         if (mounted) {
-          setState(() {
-            _metricCache[cacheKey] = data;
-          });
+          provider.trendCache[cacheKey] = data;
+          provider.trendLabelCache[cacheKey] = range.label;
         }
       } catch (e) {
-        print('Preload error for ${metric.apiMetric}: $e');
         if (mounted) {
-          setState(() {
-            _metricCache[cacheKey] = const [];
-          });
+          provider.trendCache[cacheKey] = const [];
+          provider.trendLabelCache[cacheKey] = range.label;
         }
       }
     }
@@ -290,17 +302,27 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
   Widget build(BuildContext context) {
     final DataProvider dataProvider = context.watch<DataProvider>();
     final UserDataProvider userDataProvider = context.watch<UserDataProvider>();
+    final bool isItalian = context.watch<SettingsProvider>().isItalian;
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final TextTheme textTheme = Theme.of(context).textTheme;
+
     final bool isLoading = _isLoading || dataProvider.isLoading;
     final List<MetricPoint> displayPoints = _currentPoints;
+
     final _WindowStats? stats = displayPoints.isNotEmpty
         ? _WindowStats.fromPoints(displayPoints)
         : null;
+
     final Color accentColor = _selectedMetric.resolveColor(scheme);
     final String windowLabel = _windowLabel.isNotEmpty
         ? _windowLabel
-        : _labelCache[_cacheKey] ?? 'No range';
+        : dataProvider.trendLabelCache[_cacheKey] ?? 'No range';
+
+    final bool isOfflineError = _errorMessage == 'offline';
+    
+    final double? mainSummaryValue = _getSummaryValue(displayPoints, _selectedMetric.apiMetric, _selectedPeriod);
+    
+    final bool isSumMetricDay = _selectedPeriod == _TrendPeriod.day && _selectedMetric.apiMetric == 'steps';
 
     return Scaffold(
       body: SafeArea(
@@ -313,7 +335,7 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Let\'s find your metrics from your well-being today.',
+              isItalian ? 'Esplora le tue metriche di benessere di oggi.' : 'Let\'s find your metrics from your well-being today.',
               style: textTheme.bodyMedium?.copyWith(
                 color: scheme.onSurfaceRole.withValues(alpha: 0.72),
               ),
@@ -322,6 +344,7 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
             _TimePeriodSelector(
               selectedPeriod: _selectedPeriod,
               onPeriodChanged: _selectPeriod,
+              isItalian: isItalian,
             ),
             const SizedBox(height: 8),
             _WindowNavigator(
@@ -345,7 +368,7 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${_selectedMetric.name} Trend (${_selectedPeriod.label})',
+                      '${isItalian ? _selectedMetric.nameIt : _selectedMetric.name} Trend (${_selectedPeriod.label(isItalian)})',
                       style: textTheme.titleMedium,
                     ),
                     const SizedBox(height: 10),
@@ -355,39 +378,65 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
                           ? const Center(child: CircularProgressIndicator())
                           : displayPoints.isEmpty
                               ? Center(
-                                  child: Text(
-                                    _errorMessage ??
-                                        'No data found for this period.',
-                                    style: textTheme.bodySmall?.copyWith(
-                                      color: scheme.onSurfaceRole
-                                          .withValues(alpha: 0.72),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          isOfflineError ? Icons.wifi_off_rounded : Icons.inbox_rounded, 
+                                          size: 40, 
+                                          color: scheme.onSurfaceVariant.withValues(alpha: 0.4)
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          isOfflineError 
+                                            ? (isItalian ? 'Sei offline' : 'You are offline')
+                                            : (isItalian ? 'Dati non disponibili' : 'No data available'),
+                                          style: textTheme.titleSmall?.copyWith(
+                                            color: scheme.onSurfaceRole.withValues(alpha: 0.7),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          isOfflineError 
+                                            ? (isItalian ? 'Controlla la tua connessione a internet.' : 'Please check your internet connection.')
+                                            : _selectedMetric.apiMetric == 'stress' 
+                                                ? (isItalian ? 'Impossibile calcolare lo stress senza i dati del sonno e del battito.' : 'Cannot calculate stress without sleep and heart rate data.')
+                                                : (isItalian ? 'Il dispositivo non ha registrato questa metrica.' : 'The device did not record this metric.'),
+                                          textAlign: TextAlign.center,
+                                          style: textTheme.bodySmall?.copyWith(
+                                            color: scheme.onSurfaceRole.withValues(alpha: 0.5),
+                                          ),
+                                        ),
+                                      ]
                                     ),
                                   ),
                                 )
                               : ((_selectedMetric.apiMetric == 'sleep' ||
-                                          _selectedMetric.apiMetric ==
-                                              'stress') &&
+                                          _selectedMetric.apiMetric == 'stress') &&
                                       _selectedPeriod == _TrendPeriod.day)
                                   ? _DailySummaryCard(
                                       metricId: _selectedMetric.apiMetric,
                                       value: displayPoints.first.value,
                                       accentColor: accentColor,
+                                      isItalian: isItalian,
                                     )
                                   : IgnorePointer(
-                                      ignoring:
-                                          _selectedPeriod == _TrendPeriod.day,
+                                      ignoring: _selectedPeriod == _TrendPeriod.day,
                                       child: _MetricTrendChart(
                                         points: displayPoints,
                                         accentColor: accentColor,
                                         textColor: scheme.onSurfaceRole,
                                         unit: _selectedMetric.unit,
+                                        metricId: _selectedMetric.apiMetric,
                                         highlightedIndex: _highlightedPointIndex,
-                                        enableTouch: _selectedPeriod !=
-                                            _TrendPeriod.day,
-                                        maxLabels:
-                                            _selectedPeriod == _TrendPeriod.day
+                                        enableTouch: _selectedPeriod != _TrendPeriod.day,
+                                        maxLabels: _selectedPeriod == _TrendPeriod.day
                                                 ? 6
-                                                : null,
+                                                : _selectedPeriod == _TrendPeriod.month
+                                                    ? 4
+                                                    : null,
                                         onPointSelected: (index) => setState(
                                           () => _highlightedPointIndex = index,
                                         ),
@@ -399,18 +448,20 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
                       children: [
                         Expanded(
                           child: _StatValue(
-                            title: 'Average',
+                            title: isSumMetricDay 
+                                ? (isItalian ? 'Totale' : 'Total') 
+                                : (isItalian ? 'Media' : 'Average'),
                             value: stats == null
                                 ? '--'
                                 : _formatMetricValue(
-                                    stats.average,
+                                    isSumMetricDay ? (mainSummaryValue ?? 0.0) : stats.average,
                                     _selectedMetric.unit,
                                   ),
                           ),
                         ),
                         Expanded(
                           child: _StatValue(
-                            title: 'Highest',
+                            title: isItalian ? 'Massimo' : 'Highest',
                             value: stats == null
                                 ? '--'
                                 : '${stats.maxPoint.shortLabel} (${_formatMetricValue(stats.maxPoint.value, _selectedMetric.unit)})',
@@ -418,7 +469,7 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
                         ),
                         Expanded(
                           child: _StatValue(
-                            title: 'Lowest',
+                            title: isItalian ? 'Minimo' : 'Lowest',
                             value: stats == null
                                 ? '--'
                                 : '${stats.minPoint.shortLabel} (${_formatMetricValue(stats.minPoint.value, _selectedMetric.unit)})',
@@ -430,182 +481,161 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
                 ),
               ),
             ),
-            if (displayPoints.isNotEmpty ||
-                _selectedPeriod != _TrendPeriod.day) ...[
-              const SizedBox(height: 16),
-              Text('Other Well-being Metrics', style: textTheme.titleMedium),
-              const SizedBox(height: 8),
-              ...List<Widget>.generate(_metricCatalog.length, (int index) {
-                final _MetricDefinition metric = _metricCatalog[index];
-                final bool isSelected = index == _selectedMetricIndex;
+            
+            const SizedBox(height: 16),
+            Text(isItalian ? 'Altre Metriche' : 'Other Well-being Metrics', style: textTheme.titleMedium),
+            const SizedBox(height: 8),
+            ...List<Widget>.generate(_metricCatalog.length, (int index) {
+              final _MetricDefinition metric = _metricCatalog[index];
+              final bool isSelected = index == _selectedMetricIndex;
 
-                final String listKey = _makeCacheKey(
-                  metric.apiMetric,
-                  _selectedPeriod,
-                  _windowOffset,
-                );
-                final List<MetricPoint> metricPoints = isSelected
-                    ? displayPoints
-                    : _metricCache[listKey] ?? const [];
+              final String listKey = _makeCacheKey(
+                metric.apiMetric,
+                _selectedPeriod,
+                _windowOffset,
+              );
+              final List<MetricPoint> metricPoints = isSelected
+                  ? displayPoints
+                  : dataProvider.trendCache[listKey] ?? const [];
 
-                final MetricPoint? latest =
-                    metricPoints.isNotEmpty ? metricPoints.last : null;
-                final Color metricColor = metric.resolveColor(scheme);
+              final double? summaryValue = _getSummaryValue(metricPoints, metric.apiMetric, _selectedPeriod);
+              final Color metricColor = metric.resolveColor(scheme);
 
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  elevation: 0,
-                  color: isSelected
-                      ? scheme.secondaryContainer.withValues(alpha: 0.6)
-                      : scheme.surface,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(
-                      color:
-                          isSelected ? metricColor : scheme.outlineVariant,
-                    ),
+              return Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                elevation: 0,
+                color: isSelected
+                    ? scheme.secondaryContainer.withValues(alpha: 0.6)
+                    : scheme.surface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(
+                    color: isSelected ? metricColor : scheme.outlineVariant,
                   ),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () => _selectMetric(index),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 17,
-                                backgroundColor:
-                                    metricColor.withValues(alpha: 0.14),
-                                child: Icon(
-                                  metric.icon,
-                                  color: metricColor,
-                                  size: 18,
-                                ),
+                ),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => _selectMetric(index),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 17,
+                              backgroundColor: metricColor.withValues(alpha: 0.14),
+                              child: Icon(
+                                metric.icon,
+                                color: metricColor,
+                                size: 18,
                               ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      metric.name,
-                                      style: textTheme.titleSmall,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isItalian ? metric.nameIt : metric.name,
+                                    style: textTheme.titleSmall,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${summaryValue == null ? '--' : _formatMetricValue(summaryValue, metric.unit)} • ${isItalian ? metric.statusLabelIt : metric.statusLabel}',
+                                    style: textTheme.bodySmall?.copyWith(
+                                      color: scheme.onSurfaceRole
+                                          .withValues(alpha: 0.72),
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${latest == null ? '--' : _formatMetricValue(latest.value, metric.unit)} • ${metric.statusLabel}',
-                                      style: textTheme.bodySmall?.copyWith(
-                                        color: scheme.onSurfaceRole
-                                            .withValues(alpha: 0.72),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                              Icon(
-                                isSelected
-                                    ? Icons.expand_less
-                                    : Icons.chevron_right,
-                                color: scheme.onSurfaceRole
-                                    .withValues(alpha: 0.62),
-                              ),
-                            ],
-                          ),
-                          AnimatedCrossFade(
-                            firstChild: const SizedBox.shrink(),
-                            secondChild: Padding(
-                              padding: const EdgeInsets.only(top: 10),
-                              child: isSelected && isLoading
-                                  ? const Center(
-                                      child: CircularProgressIndicator(),
-                                    )
-                                  : metricPoints.isEmpty
-                                      ? Align(
-                                          alignment: Alignment.centerLeft,
-                                          child: Text(
-                                            _errorMessage ??
-                                                'No data found for this period.',
-                                            style:
-                                                textTheme.bodySmall?.copyWith(
-                                              color: scheme.onSurfaceRole
-                                                  .withValues(alpha: 0.72),
-                                            ),
-                                          ),
-                                        )
-                                      : Align(
-                                          alignment: Alignment.centerLeft,
-                                          child: Wrap(
-                                            spacing: 7,
-                                            runSpacing: 7,
-                                            children: metricPoints
-                                                .asMap()
-                                                .entries
-                                                .map((entry) {
-                                              final int pointIdx = entry.key;
-                                              final MetricPoint point =
-                                                  entry.value;
-                                              final bool isHighlighted =
-                                                  _highlightedPointIndex ==
-                                                      pointIdx;
-
-                                              return ChoiceChip(
-                                                selected: isHighlighted,
-                                                onSelected: (selected) {
-                                                  setState(() {
-                                                    _highlightedPointIndex =
-                                                        selected
-                                                            ? pointIdx
-                                                            : null;
-                                                  });
-                                                },
-                                                showCheckmark: false,
-                                                visualDensity:
-                                                    VisualDensity.compact,
-                                                side: BorderSide(
-                                                  color: isHighlighted
-                                                      ? metricColor
-                                                      : scheme.outlineVariant,
-                                                ),
-                                                selectedColor: metricColor
-                                                    .withValues(alpha: 0.25),
-                                                backgroundColor: scheme
-                                                    .surfaceRole
-                                                    .withValues(alpha: 0.8),
-                                                label: Text(
-                                                  '${point.fullLabel}: ${_formatMetricValue(point.value, metric.unit)}',
-                                                  style: textTheme.bodySmall
-                                                      ?.copyWith(
-                                                    fontWeight: isHighlighted
-                                                        ? FontWeight.bold
-                                                        : FontWeight.normal,
-                                                    color: isHighlighted
-                                                        ? scheme.onSurface
-                                                        : scheme.onSurfaceRole,
-                                                  ),
-                                                ),
-                                              );
-                                            }).toList(),
+                            ),
+                            Icon(
+                              isSelected
+                                  ? Icons.expand_less
+                                  : Icons.chevron_right,
+                              color: scheme.onSurfaceRole
+                                  .withValues(alpha: 0.62),
+                            ),
+                          ],
+                        ),
+                        AnimatedCrossFade(
+                          firstChild: const SizedBox.shrink(),
+                          secondChild: Padding(
+                            padding: const EdgeInsets.only(top: 10),
+                            child: isSelected && isLoading
+                                ? const Center(
+                                    child: CircularProgressIndicator(),
+                                  )
+                                : metricPoints.isEmpty
+                                    ? Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: Text(
+                                          isOfflineError 
+                                            ? (isItalian ? 'Sei offline' : 'You are offline')
+                                            : (isItalian ? 'Nessun dato registrato in questo periodo.' : 'No data found for this period.'),
+                                          style: textTheme.bodySmall?.copyWith(
+                                            color: scheme.onSurfaceRole
+                                                .withValues(alpha: 0.72),
                                           ),
                                         ),
-                            ),
-                            crossFadeState: (isSelected &&
-                                    _selectedPeriod != _TrendPeriod.day)
-                                ? CrossFadeState.showSecond
-                                : CrossFadeState.showFirst,
-                            duration: const Duration(milliseconds: 220),
+                                      )
+                                    : Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: Wrap(
+                                          spacing: 7,
+                                          runSpacing: 7,
+                                          children: metricPoints
+                                              .asMap()
+                                              .entries
+                                              .map((entry) {
+                                            final int pointIdx = entry.key;
+                                            final MetricPoint point = entry.value;
+                                            final bool isHighlighted = _highlightedPointIndex == pointIdx;
+
+                                            return ChoiceChip(
+                                              selected: isHighlighted,
+                                              onSelected: (selected) {
+                                                setState(() {
+                                                  _highlightedPointIndex = selected ? pointIdx : null;
+                                                });
+                                              },
+                                              showCheckmark: false,
+                                              visualDensity: VisualDensity.compact,
+                                              side: BorderSide(
+                                                color: isHighlighted
+                                                    ? metricColor
+                                                    : scheme.outlineVariant,
+                                              ),
+                                              selectedColor: metricColor.withValues(alpha: 0.25),
+                                              backgroundColor: scheme.surfaceRole.withValues(alpha: 0.8),
+                                              label: Text(
+                                                '${point.fullLabel}: ${_formatMetricValue(point.value, metric.unit)}',
+                                                style: textTheme.bodySmall?.copyWith(
+                                                  fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
+                                                  color: isHighlighted ? scheme.onSurface : scheme.onSurfaceRole,
+                                                ),
+                                              ),
+                                            );
+                                          }).toList(),
+                                        ),
+                                      ),
                           ),
-                        ],
-                      ),
+                          crossFadeState: (isSelected && _selectedPeriod != _TrendPeriod.day)
+                              ? CrossFadeState.showSecond
+                              : CrossFadeState.showFirst,
+                          duration: const Duration(milliseconds: 220),
+                        ),
+                      ],
                     ),
                   ),
-                );
-              }),
-            ],
+                ),
+              );
+            }),
           ],
         ),
       ),
@@ -617,10 +647,10 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
 enum _TrendPeriod { day, week, month }
 
 extension on _TrendPeriod {
-  String get label {
+  String label(bool isItalian) {
     switch (this) {
       case _TrendPeriod.day:
-        return 'Day';
+        return isItalian ? 'Giorno' : 'Day';
       case _TrendPeriod.week:
         return 'Week';
       case _TrendPeriod.month:
@@ -647,17 +677,21 @@ class _MetricDefinition {
   const _MetricDefinition({
     required this.apiMetric,
     required this.name,
+    required this.nameIt,
     required this.unit,
     required this.icon,
     required this.statusLabel,
+    required this.statusLabelIt,
     required this.tone,
   });
 
   final String apiMetric;
   final String name;
+  final String nameIt;
   final String unit;
   final IconData icon;
   final String statusLabel;
+  final String statusLabelIt;
   final _MetricTone tone;
 
   Color resolveColor(ColorScheme scheme) {
@@ -705,10 +739,12 @@ class _TimePeriodSelector extends StatelessWidget {
   const _TimePeriodSelector({
     required this.selectedPeriod,
     required this.onPeriodChanged,
+    required this.isItalian,
   });
 
   final _TrendPeriod selectedPeriod;
   final ValueChanged<_TrendPeriod> onPeriodChanged;
+  final bool isItalian;
 
   @override
   Widget build(BuildContext context) {
@@ -745,11 +781,11 @@ class _TimePeriodSelector extends StatelessWidget {
 
     return Row(
       children: [
-        Text('TIME PERIOD',
+        Text(isItalian ? 'PERIODO' : 'TIME PERIOD',
             style: Theme.of(context).textTheme.labelSmall),
         const Spacer(),
         Container(
-          width: 190,
+          width: 200,
           padding: const EdgeInsets.all(3),
           decoration: BoxDecoration(
             color: scheme.surfaceContainerHigh,
@@ -757,7 +793,7 @@ class _TimePeriodSelector extends StatelessWidget {
           ),
           child: Row(
             children: [
-              segment(period: _TrendPeriod.day, label: 'DAY'),
+              segment(period: _TrendPeriod.day, label: isItalian ? 'GIORNO' : 'DAY'),
               segment(period: _TrendPeriod.week, label: 'WEEK'),
               segment(period: _TrendPeriod.month, label: 'MONTH'),
             ],
@@ -846,6 +882,7 @@ class _MetricTrendChart extends StatelessWidget {
     required this.accentColor,
     required this.textColor,
     required this.unit,
+    required this.metricId,
     this.highlightedIndex,
     required this.onPointSelected,
     this.enableTouch = true,
@@ -856,6 +893,7 @@ class _MetricTrendChart extends StatelessWidget {
   final Color accentColor;
   final Color textColor;
   final String unit;
+  final String metricId;
   final bool enableTouch;
   final int? maxLabels;
   final int? highlightedIndex;
@@ -880,15 +918,23 @@ class _MetricTrendChart extends StatelessWidget {
         points.map((p) => p.value).reduce((a, b) => a > b ? a : b);
     final double range = (maxValue - minValue).abs();
     final double padding = range < 8 ? 4 : range * 0.2;
-    final double interval =
-        ((maxValue + padding) - (minValue - padding)) / 4;
+
+    double effectiveMinY = (minValue - padding < 0) ? 0.0 : (minValue - padding);
+    double effectiveMaxY = maxValue + padding;
+    double interval = ((effectiveMaxY) - (effectiveMinY)) / 4;
+
+    if (metricId == 'stress') {
+      effectiveMinY = 0.0;
+      effectiveMaxY = 100.0;
+      interval = 25.0; 
+    }
 
     return LineChart(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
       LineChartData(
-        minY: (minValue - padding < 0) ? 0.0 : (minValue - padding),
-        maxY: maxValue + padding,
+        minY: effectiveMinY,
+        maxY: effectiveMaxY,
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
@@ -1062,33 +1108,41 @@ const List<_MetricDefinition> _metricCatalog = [
   _MetricDefinition(
     apiMetric: 'stress',
     name: 'Stress Index',
+    nameIt: 'Indice di Stress',
     unit: '/100',
     icon: Icons.monitor_heart_outlined,
     statusLabel: 'Balanced',
+    statusLabelIt: 'Bilanciato',
     tone: _MetricTone.highlight,
   ),
   _MetricDefinition(
     apiMetric: 'heart_rate',
     name: 'Heart Rate',
+    nameIt: 'Battito Cardiaco',
     unit: 'bpm',
     icon: Icons.favorite_border,
     statusLabel: 'Weekly Average',
+    statusLabelIt: 'Media Settimanale',
     tone: _MetricTone.danger,
   ),
   _MetricDefinition(
     apiMetric: 'sleep',
     name: 'Sleep Hours',
+    nameIt: 'Ore di Sonno',
     unit: 'h',
     icon: Icons.nightlight_round,
     statusLabel: 'Sleep Hours',
+    statusLabelIt: 'Ore di Sonno',
     tone: _MetricTone.steady,
   ),
   _MetricDefinition(
     apiMetric: 'steps',
     name: 'Step Count',
+    nameIt: 'Conteggio Passi',
     unit: 'steps',
     icon: Icons.directions_walk,
     statusLabel: 'Daily Goal Tracking',
+    statusLabelIt: 'Progresso Giornaliero',
     tone: _MetricTone.highlight,
   ),
 ];
@@ -1098,11 +1152,13 @@ class _DailySummaryCard extends StatelessWidget {
     required this.metricId,
     required this.value,
     required this.accentColor,
+    required this.isItalian,
   });
 
   final String metricId;
   final double value;
   final Color accentColor;
+  final bool isItalian;
 
   Color _getStressColor(double level, Brightness brightness) {
     final isDark = brightness == Brightness.dark;
@@ -1124,11 +1180,11 @@ class _DailySummaryCard extends StatelessWidget {
       final int h = value.floor();
       final int m = ((value - h) * 60).round();
       mainText = '${h}h ${m}m';
-      subText = 'Total sleep time';
+      subText = isItalian ? 'Tempo di sonno totale' : 'Total sleep time';
     } else if (metricId == 'stress') {
       icon = Icons.monitor_heart_outlined;
       mainText = '${value.round()}/100';
-      subText = 'Calculated Daily Stress';
+      subText = isItalian ? 'Stress Giornaliero Calcolato' : 'Calculated Daily Stress';
       displayColor = _getStressColor(value, Theme.of(context).brightness);
     }
 
