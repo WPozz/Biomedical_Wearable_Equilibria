@@ -105,7 +105,7 @@ class _ReportArchivioScreenState extends State<ReportArchivioScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          isItalian ? 'Calendario Report' : 'Weekly Reports',
+          isItalian ? 'Storico settimanale' : 'Weekly History',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,

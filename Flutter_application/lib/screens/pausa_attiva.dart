@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application/screens/selezione_dolore.dart';
-import 'dart:math'; 
-import '../data/video_archive.dart'; 
+import 'package:provider/provider.dart';
+import 'package:flutter_application/providers/settings_provider.dart';
+import 'dart:math';
+import '../data/video_archive.dart';
 import 'video_player.dart';
 
 class PausaAttivaScreen extends StatelessWidget {
@@ -10,6 +12,7 @@ class PausaAttivaScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isItalian   = context.watch<SettingsProvider>().isItalian;
 
     return Scaffold(
       appBar: AppBar(
@@ -18,11 +21,11 @@ class PausaAttivaScreen extends StatelessWidget {
         centerTitle: true,
         toolbarHeight: 100,
         title: Text(
-          "Pick your break",
+          isItalian ? 'Scegli la tua pausa' : 'Pick your break',
           style: TextStyle(
-            color: colorScheme.onSurface, 
+            color: colorScheme.onSurface,
             fontWeight: FontWeight.bold,
-            fontSize: 32, 
+            fontSize: 32,
           ),
         ),
         leading: IconButton(
@@ -30,7 +33,6 @@ class PausaAttivaScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
@@ -42,55 +44,59 @@ class PausaAttivaScreen extends StatelessWidget {
                 // --- TOTAL BODY ---
                 _buildOptionCard(
                   context: context,
-                  title: "Full body",
-                  duration: "3 min",
+                  title: isItalian ? 'Corpo intero' : 'Full body',
+                  duration: '3 min',
                   icon: Icons.accessibility_new_rounded,
-                  cardColor: colorScheme.primary, 
-                  contentColor: colorScheme.onPrimary, 
+                  cardColor: colorScheme.primary,
+                  contentColor: colorScheme.onPrimary,
                   onTap: () {
-                    // 1. Filtro
                     final totalBodyVideos = videoArchive
-                        .where((v) => v.category == "FULL BODY")
+                        .where((v) => v.category == 'FULL BODY')
                         .toList();
 
                     if (totalBodyVideos.isNotEmpty) {
-                      // 2. Random
-                      final randomVideo = totalBodyVideos[Random().nextInt(totalBodyVideos.length)];
-                      
-                      // 3. Player
+                      final randomVideo = totalBodyVideos[
+                          Random().nextInt(totalBodyVideos.length)];
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => VideoPlayerScreen(video: randomVideo),
+                          builder: (context) =>
+                              VideoPlayerScreen(video: randomVideo),
                         ),
                       );
                     } else {
-                      // Caso archivio vuoto
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("No Full Body videos available")),
+                        SnackBar(
+                          content: Text(
+                            isItalian
+                                ? 'Nessun video disponibile'
+                                : 'No Full Body videos available',
+                          ),
+                        ),
                       );
                     }
                   },
                 ),
-                
+
                 const SizedBox(height: 24),
 
                 // --- SOLLIEVO MIRATO ---
                 _buildOptionCard(
                   context: context,
-                  title: "Targeted relief",
-                  duration: "5 min",
+                  title: isItalian ? 'Sollievo mirato' : 'Targeted relief',
+                  duration: '5 min',
                   icon: Icons.ads_click_rounded,
-                  cardColor: colorScheme.tertiary, 
-                  contentColor: colorScheme.onTertiary, 
+                  cardColor: colorScheme.tertiary,
+                  contentColor: colorScheme.onTertiary,
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const SelezioneDoloreScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => const SelezioneDoloreScreen()),
                     );
                   },
                 ),
-                
+
                 const SizedBox(height: 20),
               ],
             ),
@@ -144,7 +150,8 @@ class PausaAttivaScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 8),
                 decoration: BoxDecoration(
                   color: contentColor.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20),

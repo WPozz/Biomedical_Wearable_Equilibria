@@ -1081,7 +1081,7 @@ class _GoalsRow extends StatelessWidget {
         Expanded(
           child: _GoalCard(
             name: isItalian
-                ? 'Passi ${(targetPassi / 1000).toStringAsFixed(0)}k/die'
+                ? 'Passi ${(targetPassi / 1000).toStringAsFixed(0)}k/giorno'
                 : '${(targetPassi / 1000).toStringAsFixed(0)}k steps/day',
             reached: report.stepsGoalDaysReached,
             total: 7,

@@ -80,7 +80,7 @@ class MyApp extends StatelessWidget { // stateless because the theme and title o
     final brightness = View.of(context).platformDispatcher.platformBrightness;
 
     // 2. Create the text theme using the utility functions and chosen Google fonts
-    TextTheme textTheme = createTextTheme(context, "Nunito", "Fredoka");
+    TextTheme textTheme = createTextTheme(context, "Plus Jakarta Sans", "Inter");
 
     // 3. Initialize the MaterialTheme class with the font configuration
     MaterialTheme theme = MaterialTheme(textTheme);
