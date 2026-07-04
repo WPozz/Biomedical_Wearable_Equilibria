@@ -106,51 +106,6 @@ class NotificheScreen extends StatelessWidget {
               ],
             ),
           ),
-
-          const SizedBox(height: 24),
-
-          Text(
-            isItalian ? 'PRIVACY' : 'PRIVACY',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: colorScheme.onSurfaceVariant,
-              letterSpacing: 0.8,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Card(
-            elevation: 0,
-            color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            clipBehavior: Clip.antiAlias,
-            child: _buildSwitch(
-              context: context,
-              icon: Icons.people_outline,
-              iconColor: colorScheme.primary,
-              title: isItalian ? 'Condividi dati con HR' : 'Share data with HR',
-              subtitle: isItalian
-                  ? 'Contribuisci in modo anonimo al report stress del tuo reparto'
-                  : 'Anonymously contribute to your department stress report',
-              value: settings.shareHRData,
-              onChanged: (v) => context.read<SettingsProvider>().setShareHRData(v),
-            ),
-          ),
-
-          const SizedBox(height: 12),
-
-          // Nota informativa
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Text(
-              isItalian
-                  ? '🔒 I tuoi dati individuali non saranno mai visibili all\'HR. Viene condivisa solo la media anonima del reparto.'
-                  : '🔒 Your individual data is never visible to HR. Only the anonymous department average is shared.',
-              style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant),
-            ),
-          ),
-
-          const SizedBox(height: 32),
         ],
       ),
     );
