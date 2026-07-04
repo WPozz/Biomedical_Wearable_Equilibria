@@ -45,7 +45,6 @@ class PausaAttivaScreen extends StatelessWidget {
                 _buildOptionCard(
                   context: context,
                   title: isItalian ? 'Corpo intero' : 'Full body',
-                  duration: '3 min',
                   icon: Icons.accessibility_new_rounded,
                   cardColor: colorScheme.primary,
                   contentColor: colorScheme.onPrimary,
@@ -84,7 +83,6 @@ class PausaAttivaScreen extends StatelessWidget {
                 _buildOptionCard(
                   context: context,
                   title: isItalian ? 'Sollievo mirato' : 'Targeted relief',
-                  duration: '5 min',
                   icon: Icons.ads_click_rounded,
                   cardColor: colorScheme.tertiary,
                   contentColor: colorScheme.onTertiary,
@@ -109,7 +107,6 @@ class PausaAttivaScreen extends StatelessWidget {
   Widget _buildOptionCard({
     required BuildContext context,
     required String title,
-    required String duration,
     required IconData icon,
     required Color cardColor,
     required Color contentColor,
@@ -146,23 +143,6 @@ class PausaAttivaScreen extends StatelessWidget {
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
                   color: contentColor,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 20, vertical: 8),
-                decoration: BoxDecoration(
-                  color: contentColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  duration,
-                  style: TextStyle(
-                    color: contentColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
                 ),
               ),
             ],

@@ -17,6 +17,76 @@ String _translateCategory(String cat, bool isItalian) {
   }
 }
 
+
+//  BODY ZONE LAYOUT
+
+class BodyZoneLayout {
+  final double cx;
+  final double s;
+
+  final double headR, headCY;
+  final double neckW, neckH, neckX, neckY;
+  final double torsoW, torsoX, torsoTopY, torsoTopH, torsoBotY, torsoBotH;
+  final double armGap, armW, armH, armY, armLX, armRX;
+  final double handW, handH, handY, handLX, handRX;
+  final double legGap, legW, legH, legY, legLX, legRX;
+
+  BodyZoneLayout({required this.cx, required this.s})
+      : headR = 22.0 * s,
+        headCY = 24.0 * s,
+        neckW = 16.0 * s,
+        neckH = 14.0 * s,
+        neckX = cx - (16.0 * s) / 2,
+        neckY = (24.0 * s) + (22.0 * s),
+        torsoW = 92.0 * s,
+        torsoX = cx - (92.0 * s) / 2,
+        torsoTopY = (24.0 * s) + (22.0 * s) + (14.0 * s) + 4 * s,
+        torsoTopH = 72.0 * s,
+        torsoBotY = (24.0 * s) + (22.0 * s) + (14.0 * s) + 4 * s + 72.0 * s + 4.0 * s,
+        torsoBotH = 72.0 * s,
+        armGap = 4.0 * s,
+        armW = 24.0 * s,
+        armH = 110.0 * s,
+        armY = (24.0 * s) + (22.0 * s) + (14.0 * s) + 4 * s,
+        armLX = (cx - (92.0 * s) / 2) - (24.0 * s) - 4.0 * s,
+        armRX = (cx - (92.0 * s) / 2) + (92.0 * s) + 4.0 * s,
+        handW = 24.0 * s,
+        handH = 36.0 * s,
+        handY = (24.0 * s) + (22.0 * s) + (14.0 * s) + 4 * s + 110.0 * s + 4.0 * s,
+        handLX = (cx - (92.0 * s) / 2) - (24.0 * s) - 4.0 * s,
+        handRX = (cx - (92.0 * s) / 2) + (92.0 * s) + 4.0 * s,
+        legGap = 4.0 * s,
+        legW = 36.0 * s,
+        legH = 155.0 * s,
+        legY = (24.0 * s) + (22.0 * s) + (14.0 * s) + 4 * s + 72.0 * s + 4.0 * s + 72.0 * s + 4.0 * s,
+        legLX = cx - (36.0 * s) - (4.0 * s) / 2,
+        legRX = cx + (4.0 * s) / 2;
+
+  Map<String, List<Rect>> get zoneRects => {
+        "NECK AND CERVICAL": [
+          Rect.fromLTWH(cx - headR, 0, headR * 2, headCY + headR + neckH + 4 * s),
+        ],
+        "SHOULDERS AND UPPER BACK": [
+          Rect.fromLTWH(torsoX, torsoTopY, torsoW, torsoTopH),
+        ],
+        "BACK AND LUMBAR": [
+          Rect.fromLTWH(torsoX, torsoBotY, torsoW, torsoBotH),
+        ],
+        "ARMS AND ELBOWS": [
+          Rect.fromLTWH(armLX, armY, armW, armH),
+          Rect.fromLTWH(armRX, armY, armW, armH),
+        ],
+        "WRISTS AND HANDS": [
+          Rect.fromLTWH(handLX, handY, handW, handH),
+          Rect.fromLTWH(handRX, handY, handW, handH),
+        ],
+        "LEGS AND ANKLES": [
+          Rect.fromLTWH(legLX, legY, legW, legH),
+          Rect.fromLTWH(legRX, legY, legW, legH),
+        ],
+      };
+}
+
 class CercaEsercizioScreen extends StatefulWidget {
   const CercaEsercizioScreen({super.key});
 
@@ -92,11 +162,9 @@ class _CercaEsercizioScreenState extends State<CercaEsercizioScreen> {
             ),
           ),
 
-        
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                // Calcola la scala massima che entra nello spazio disponibile
                 final double scaleW = constraints.maxWidth / _baseW;
                 final double scaleH = constraints.maxHeight / _baseH;
                 final double scale = (scaleW < scaleH ? scaleW : scaleH) * 0.9;
@@ -104,13 +172,15 @@ class _CercaEsercizioScreenState extends State<CercaEsercizioScreen> {
                 final double canvasW = _baseW * scale;
                 final double canvasH = _baseH * scale;
 
+                final layout = BodyZoneLayout(cx: canvasW / 2, s: scale);
+
                 return Center(
                   child: SizedBox(
                     width: canvasW,
                     height: canvasH,
                     child: Opacity(
                       opacity: _tutteLeZone ? 0.3 : 1.0,
-                      child: _buildFigura(colorScheme, scale, canvasW),
+                      child: _buildFigura(layout),
                     ),
                   ),
                 );
@@ -146,96 +216,55 @@ class _CercaEsercizioScreenState extends State<CercaEsercizioScreen> {
     );
   }
 
-  Widget _buildFigura(ColorScheme colorScheme, double s, double canvasW) {
-    final double cx = canvasW / 2;
-
-    final double headR  = 22.0 * s;
-    final double headCY = 24.0 * s;
-    final double neckH  = 14.0 * s;
-    final double neckY  = headCY + headR;
-    final double torsoW    = 92.0 * s;
-    final double torsoX    = cx - torsoW / 2;
-    final double torsoTopY = neckY + neckH + 4 * s;
-    final double torsoTopH = 72.0 * s;
-    final double torsoGap  = 4.0 * s;
-    final double torsoBotY = torsoTopY + torsoTopH + torsoGap;
-    final double torsoBotH = 72.0 * s;
-    final double armGap = 4.0 * s;
-    final double armW   = 24.0 * s;
-    final double armH   = 110.0 * s;
-    final double armY   = torsoTopY;
-    final double armLX  = torsoX - armW - armGap;
-    final double armRX  = torsoX + torsoW + armGap;
-    final double handW  = 24.0 * s;
-    final double handH  = 36.0 * s;
-    final double handY  = armY + armH + armGap;
-    final double handLX = armLX;
-    final double handRX = armRX;
-    final double legGap = 4.0 * s;
-    final double legW   = 36.0 * s;
-    final double legH   = 155.0 * s;
-    final double legY   = torsoBotY + torsoBotH + legGap;
-    final double legLX  = cx - legW - legGap / 2;
-    final double legRX  = cx + legGap / 2;
-
+   Widget _buildFigura(BodyZoneLayout layout) {
     return Stack(
       children: [
         Positioned.fill(
           child: CustomPaint(
             painter: SilhouettePainter(
-              color: colorScheme.onSurface,
+              color: Theme.of(context).colorScheme.onSurface,
               selectedAreas: _zoneSelected,
               isDisabled: _tutteLeZone,
-              cx: cx, s: s,
+              layout: layout,
             ),
           ),
         ),
-        if (!_tutteLeZone) ...[
-          _hit(left: cx - headR,  top: 0,         w: headR * 2, h: headCY + headR + neckH + 4 * s, label: "NECK AND CERVICAL"),
-          _hit(left: torsoX,      top: torsoTopY, w: torsoW,    h: torsoTopH,                       label: "SHOULDERS AND UPPER BACK"),
-          _hit(left: torsoX,      top: torsoBotY, w: torsoW,    h: torsoBotH,                       label: "BACK AND LUMBAR"),
-          _hit(left: armLX,       top: armY,      w: armW,      h: armH,                            label: "ARMS AND ELBOWS"),
-          _hit(left: armRX,       top: armY,      w: armW,      h: armH,                            label: "ARMS AND ELBOWS"),
-          _hit(left: handLX,      top: handY,     w: handW,     h: handH,                           label: "WRISTS AND HANDS"),
-          _hit(left: handRX,      top: handY,     w: handW,     h: handH,                           label: "WRISTS AND HANDS"),
-          _hit(left: legLX,       top: legY,      w: legW,      h: legH,                            label: "LEGS AND ANKLES"),
-          _hit(left: legRX,       top: legY,      w: legW,      h: legH,                            label: "LEGS AND ANKLES"),
-        ],
+        if (!_tutteLeZone)
+          for (final entry in layout.zoneRects.entries)
+            for (final rect in entry.value) _hit(rect: rect, label: entry.key),
       ],
     );
   }
 
-  Widget _hit({required double left, required double top, required double w, required double h, required String label}) {
+  Widget _hit({required Rect rect, required String label}) {
     return Positioned(
-      left: left, top: top,
+      left: rect.left,
+      top: rect.top,
       child: GestureDetector(
         onTap: () => setState(() {
           final newSet = Set<String>.from(_zoneSelected);
           newSet.contains(label) ? newSet.remove(label) : newSet.add(label);
           _zoneSelected = newSet;
         }),
-        child: Container(width: w, height: h, color: Colors.transparent),
+        child: Container(width: rect.width, height: rect.height, color: Colors.transparent),
       ),
     );
   }
 }
 
-// ---------------------------------------------------------------------------
 //  SILHOUETTE PAINTER
-// ---------------------------------------------------------------------------
+
 class SilhouettePainter extends CustomPainter {
   final Color color;
   final Set<String> selectedAreas;
   final bool isDisabled;
-  final double cx;
-  final double s;
+  final BodyZoneLayout layout;
 
   static const Color _hl = Color(0xFFE24B4A);
 
   const SilhouettePainter({
     required this.color,
-    required this.cx,
-    required this.s,
+    required this.layout,
     this.selectedAreas = const {},
     this.isDisabled = false,
   });
@@ -245,51 +274,20 @@ class SilhouettePainter extends CustomPainter {
     ..style = PaintingStyle.fill;
 
   RRect _rr(double x, double y, double w, double h, {double r = 8}) =>
-      RRect.fromRectAndRadius(Rect.fromLTWH(x, y, w, h), Radius.circular(r * s));
+      RRect.fromRectAndRadius(Rect.fromLTWH(x, y, w, h), Radius.circular(r * layout.s));
 
   @override
   void paint(Canvas canvas, Size size) {
-    final double headR  = 22.0 * s;
-    final double headCY = 24.0 * s;
-    final double neckW  = 16.0 * s;
-    final double neckH  = 14.0 * s;
-    final double neckX  = cx - neckW / 2;
-    final double neckY  = headCY + headR;
-    final double torsoW    = 92.0 * s;
-    final double torsoX    = cx - torsoW / 2;
-    final double torsoTopY = neckY + neckH + 4 * s;
-    final double torsoTopH = 72.0 * s;
-    final double torsoGap  = 4.0 * s;
-    final double torsoBotY = torsoTopY + torsoTopH + torsoGap;
-    final double torsoBotH = 72.0 * s;
-    final double armGap = 4.0 * s;
-    final double armW   = 24.0 * s;
-    final double armH   = 110.0 * s;
-    final double armY   = torsoTopY;
-    final double armLX  = torsoX - armW - armGap;
-    final double armRX  = torsoX + torsoW + armGap;
-    final double handW  = 24.0 * s;
-    final double handH  = 36.0 * s;
-    final double handY  = armY + armH + armGap;
-    final double handLX = armLX;
-    final double handRX = armRX;
-    final double legGap = 4.0 * s;
-    final double legW   = 36.0 * s;
-    final double legH   = 155.0 * s;
-    final double legY   = torsoBotY + torsoBotH + legGap;
-    final double legLX  = cx - legW - legGap / 2;
-    final double legRX  = cx + legGap / 2;
-
-    canvas.drawCircle(Offset(cx, headCY), headR,                _p("NECK AND CERVICAL"));
-    canvas.drawRRect(_rr(neckX, neckY, neckW, neckH, r: 4),     _p("NECK AND CERVICAL"));
-    canvas.drawRRect(_rr(torsoX, torsoTopY, torsoW, torsoTopH),  _p("SHOULDERS AND UPPER BACK"));
-    canvas.drawRRect(_rr(torsoX, torsoBotY, torsoW, torsoBotH),  _p("BACK AND LUMBAR"));
-    canvas.drawRRect(_rr(armLX,  armY,  armW,  armH,  r: 10),   _p("ARMS AND ELBOWS"));
-    canvas.drawRRect(_rr(armRX,  armY,  armW,  armH,  r: 10),   _p("ARMS AND ELBOWS"));
-    canvas.drawRRect(_rr(handLX, handY, handW, handH, r: 10),   _p("WRISTS AND HANDS"));
-    canvas.drawRRect(_rr(handRX, handY, handW, handH, r: 10),   _p("WRISTS AND HANDS"));
-    canvas.drawRRect(_rr(legLX,  legY,  legW,  legH,  r: 12),   _p("LEGS AND ANKLES"));
-    canvas.drawRRect(_rr(legRX,  legY,  legW,  legH,  r: 12),   _p("LEGS AND ANKLES"));
+    canvas.drawCircle(Offset(layout.cx, layout.headCY), layout.headR, _p("NECK AND CERVICAL"));
+    canvas.drawRRect(_rr(layout.neckX, layout.neckY, layout.neckW, layout.neckH, r: 4), _p("NECK AND CERVICAL"));
+    canvas.drawRRect(_rr(layout.torsoX, layout.torsoTopY, layout.torsoW, layout.torsoTopH), _p("SHOULDERS AND UPPER BACK"));
+    canvas.drawRRect(_rr(layout.torsoX, layout.torsoBotY, layout.torsoW, layout.torsoBotH), _p("BACK AND LUMBAR"));
+    canvas.drawRRect(_rr(layout.armLX, layout.armY, layout.armW, layout.armH, r: 10), _p("ARMS AND ELBOWS"));
+    canvas.drawRRect(_rr(layout.armRX, layout.armY, layout.armW, layout.armH, r: 10), _p("ARMS AND ELBOWS"));
+    canvas.drawRRect(_rr(layout.handLX, layout.handY, layout.handW, layout.handH, r: 10), _p("WRISTS AND HANDS"));
+    canvas.drawRRect(_rr(layout.handRX, layout.handY, layout.handW, layout.handH, r: 10), _p("WRISTS AND HANDS"));
+    canvas.drawRRect(_rr(layout.legLX, layout.legY, layout.legW, layout.legH, r: 12), _p("LEGS AND ANKLES"));
+    canvas.drawRRect(_rr(layout.legRX, layout.legY, layout.legW, layout.legH, r: 12), _p("LEGS AND ANKLES"));
   }
 
   @override
@@ -297,12 +295,12 @@ class SilhouettePainter extends CustomPainter {
       old.selectedAreas != selectedAreas ||
       old.color != color ||
       old.isDisabled != isDisabled ||
-      old.s != s;
+      old.layout.s != layout.s ||
+      old.layout.cx != layout.cx;
 }
 
-// ---------------------------------------------------------------------------
 //  RISULTATI RICERCA
-// ---------------------------------------------------------------------------
+
 class RisultatiRicercaScreen extends StatelessWidget {
   final List<ExerciseVideo> videoFiltrati;
   final bool isItalian;

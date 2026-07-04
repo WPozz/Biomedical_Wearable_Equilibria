@@ -19,15 +19,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   YoutubePlayerController? _webController;
   mobile.YoutubePlayerController? _mobileController;
 
-  // ── NOTA SUL FIX ───────────────────────────────────────────────────────
-  // PRIMA: nessuno stava ad ascoltare se il video fosse arrivato alla
-  // fine, quindi una volta terminato l'utente restava bloccato sulla
-  // schermata finché non premeva manualmente "Termina Pausa".
-  //
-  // FIX: ascoltiamo lo stato del player (sia su mobile che su web) e,
-  // quando passa a "ended", mostriamo un piccolo messaggio di
-  // completamento e cambiamo il bottone in "Fatto ✓" — restiamo comunque
-  // sulla schermata, è l'utente a decidere quando uscire (scelta (b)).
   bool _videoEnded = false;
 
   @override
@@ -39,8 +30,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         autoPlay: true,
         params: const YoutubePlayerParams(mute: false),
       );
-      // youtube_player_iframe espone lo stato del player come stream:
-      // ci iscriviamo per intercettare il passaggio a PlayerState.ended.
+      
       _webController!.listen((value) {
         if (!_videoEnded && value.playerState == PlayerState.ended) {
           if (mounted) setState(() => _videoEnded = true);
@@ -51,9 +41,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         initialVideoId: widget.video.youtubeId,
         flags: const mobile.YoutubePlayerFlags(autoPlay: true),
       );
-      // youtube_player_flutter espone lo stato tramite il
-      // ValueListenable del controller stesso: aggiungiamo un listener
-      // dedicato per intercettare PlayerState.ended.
       _mobileController!.addListener(_onMobilePlayerStateChanged);
     }
   }
@@ -118,7 +105,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       );
     }
 
-    // ── TELEFONO ──
+    // ── MOBILE ──
     return mobile.YoutubePlayerBuilder(
       player: mobile.YoutubePlayer(
         controller: _mobileController!,
@@ -161,14 +148,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                         ),
                         const SizedBox(height: 40),
 
-                        // ── TIMER CIRCOLARE / CHECK DI COMPLETAMENTO ──
+                        // COMPLETION CHECK
                         ValueListenableBuilder<mobile.YoutubePlayerValue>(
                           valueListenable: _mobileController!,
                           builder: (context, value, child) {
                             if (_videoEnded) {
-                              // A fine video mostriamo una spunta invece
-                              // del countdown, che a 0:00 risulterebbe
-                              // un po' anonimo.
                               return Container(
                                 width: 130,
                                 height: 130,
@@ -230,8 +214,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     );
   }
 
-  // Banner mostrato solo nel ramo web a fine video (il ramo mobile ha già
-  // un suo testo dedicato sopra al timer, vedi build() più in alto).
   Widget _buildCompletionBanner(BuildContext context, bool isItalian) {
     if (!_videoEnded) return const SizedBox(height: 32);
     final colorScheme = Theme.of(context).colorScheme;
@@ -255,9 +237,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     );
   }
 
-  // Bottone finale: "Termina Pausa" durante la riproduzione,
-  // "Fatto ✓" (in evidenza) una volta che il video è terminato —
-  // resta comunque l'utente a decidere quando lasciare la schermata.
   Widget _buildEndButton(BuildContext context, bool isItalian) {
     final colorScheme = Theme.of(context).colorScheme;
 

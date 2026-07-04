@@ -1,7 +1,7 @@
 class ExerciseVideo {
   final String youtubeId;
   final String title;
-  final String titleIt; // 
+  final String titleIt;
   final String category;
   final int durationMinutes;
 
@@ -13,7 +13,7 @@ class ExerciseVideo {
     required this.durationMinutes,
   });
 
-  // Metodo helper per ottenere il titolo corretto in base alla lingua
+  // language based title
   String getTitle(bool isItalian) {
     return isItalian ? titleIt : title;
   }

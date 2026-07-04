@@ -451,7 +451,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   // ── Griglia metriche ──────────────────────────────────────
                   Text(
-                    isItalian ? "Attività" : "Activity",
+                    isItalian ? "Panoramica" : "Vitals",
                     style: const TextStyle(
                         fontSize: 18, fontWeight: FontWeight.bold),
                   ),

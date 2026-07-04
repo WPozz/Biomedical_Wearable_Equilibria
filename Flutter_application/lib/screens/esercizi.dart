@@ -54,7 +54,7 @@ class _EserciziScreenState extends State<EserciziScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // BOTTONE RICERCA
+            // Search button
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: ElevatedButton.icon(
@@ -82,7 +82,7 @@ class _EserciziScreenState extends State<EserciziScreen> {
               child: Text(isItalian ? "Scelti per te" : "Quick picks", style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             ),
 
-            // Lista randomica
+            // Random list
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: GridView.builder(
@@ -109,7 +109,7 @@ class _EserciziScreenState extends State<EserciziScreen> {
               child: Text(isItalian ? "Tutti" : "All", style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             ),
 
-            // ListView completo
+            // Full ListView
             ListView.builder(
               shrinkWrap: true, 
               physics: const NeverScrollableScrollPhysics(), 
