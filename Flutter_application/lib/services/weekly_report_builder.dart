@@ -7,7 +7,6 @@ import 'stress_calculator.dart';
 abstract class WeeklyReportBuilder {
   static final DateTime kArchiveEnd = DateTime(2026, 6, 21);
 
-  // ── ENTRY POINT ───────────────────────────────────────────────────────────
 
   static Future<WeeklyReport> build({
     required DataProvider dataProvider,
@@ -23,7 +22,7 @@ abstract class WeeklyReportBuilder {
     final DateTime prevStart = weekStart.subtract(const Duration(days: 7));
     final DateTime prevEnd   = weekEnd.subtract(const Duration(days: 7));
 
-    // Fetch settimana corrente (sleep + steps + hr + exercise in un bundle)
+    // Fetch settimana corrente
     final bundle = await dataProvider.fetchWeekBundle(startStr, endStr);
     final sleepPoints              = bundle.sleep;
     final stepsPoints              = bundle.steps;
@@ -31,7 +30,7 @@ abstract class WeeklyReportBuilder {
     final hrIntraday               = bundle.hrIntraday;
     final exerciseZoneMinutesByDate = bundle.exerciseZoneMinutesByDate;
 
-    // Stress calcolato localmente (no fetch aggiuntive)
+    // Stress calcolato localmente
     final stressPoints = _computeStressPoints(
       sleepPoints,
       stepsPoints,
@@ -41,7 +40,7 @@ abstract class WeeklyReportBuilder {
     );
     await Future.delayed(const Duration(milliseconds: 200));
 
-    // Fetch settimana precedente — solo sleep e steps per i delta
+    // Fetch settimana precedente 
     final prevSleep = await dataProvider.fetchMetricRange(
         'sleep', _fmt(prevStart), _fmt(prevEnd));
     await Future.delayed(const Duration(milliseconds: 150));
@@ -56,7 +55,7 @@ abstract class WeeklyReportBuilder {
       stressPoints: stressPoints,
     );
 
-    // Conta giorni senza dato sonno — settimana corrente
+    // Conta giorni senza dato sonno
     final Set<String> sleepDates = sleepPoints.map((p) => p.fullLabel).toSet();
     int missingSleepDays = 0;
     for (int i = 0; i < 7; i++) {
@@ -208,7 +207,8 @@ abstract class WeeklyReportBuilder {
     DateTime? archiveEnd,
     int weekCount = 8,
   }) {
-    final DateTime end = archiveEnd ?? kArchiveEnd;
+    // Allinea sempre alla domenica coincidente o precedente
+    final DateTime end = _lastSundayOnOrBefore(archiveEnd ?? kArchiveEnd);
     final List<({DateTime start, DateTime end})> ranges = [];
     DateTime weekEnd = end;
     for (int i = 0; i < weekCount; i++) {
@@ -217,6 +217,12 @@ abstract class WeeklyReportBuilder {
       weekEnd = weekStart.subtract(const Duration(days: 1));
     }
     return ranges;
+  }
+
+  // Domenica coincidente o immediatamente precedente a [d].
+  static DateTime _lastSundayOnOrBefore(DateTime d) {
+    final int daysSinceSunday = d.weekday % 7; // Sunday->0, Monday->1, ... Saturday->6
+    return d.subtract(Duration(days: daysSinceSunday));
   }
 
   // ── STRESS LOCALE ─────────────────────────────────────────────────────────

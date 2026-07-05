@@ -508,7 +508,7 @@ class _ProfileState extends State<Profile> {
                         line1:
                             isItalian ? 'Orario critico' : 'Peak time',
                         line2:
-                            '${r.peakStressDaysCount}/${r.dailyStress.length} ${isItalian ? 'giorni' : 'days'}',
+                            '${r.peakStressDaysCount}/5 ${isItalian ? 'giorni' : 'days'}',
                         fg: fg,
                       ),
                     ),

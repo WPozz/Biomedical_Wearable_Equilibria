@@ -132,9 +132,6 @@ class WeeklyReport {
   bool get sleepCorrelationSignificant =>
       sleepStressCorrelation.abs() >= correlationThreshold;
 
-  bool get stepsCorrelationSignificant =>
-      stepsStressCorrelation.abs() >= correlationThreshold;
-
   bool get movementCorrelationSignificant =>
       stepsStressCorrelation.abs() >= correlationThreshold;
 
