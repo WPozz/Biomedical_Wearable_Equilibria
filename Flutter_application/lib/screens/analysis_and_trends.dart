@@ -41,8 +41,22 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
 
   _MetricDefinition get _selectedMetric => _metricCatalog[_selectedMetricIndex];
 
-  bool get _canGoToPreviousWindow => _windowOffset > -2;
+  // FIX PUNTO 2: Limiti dinamici per lo storico (circa 6 mesi per ogni vista)
+  int get _minOffset {
+    switch (_selectedPeriod) {
+      case _TrendPeriod.day:
+        return -180; // 180 giorni indietro
+      case _TrendPeriod.week:
+        return -24;  // 24 settimane indietro
+      case _TrendPeriod.month:
+        return -6;   // 6 mesi indietro
+    }
+  }
 
+  // Il pulsante "indietro" si disabilita se raggiungiamo il limite
+  bool get _canGoToPreviousWindow => _windowOffset > _minOffset;
+
+  // Il pulsante "avanti" si disabilita se siamo a 0 (oggi/settimana corrente)
   bool get _canGoToNextWindow => _windowOffset < 0;
 
   String get _cacheKey => _makeCacheKey(
@@ -79,7 +93,9 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
 
   void _moveWindow(int delta) {
     final int candidate = _windowOffset + delta;
-    if (candidate < -2 || candidate > 2) return;
+    
+    // Sicurezza: Impediamo di andare oltre lo storico o nel futuro
+    if (candidate < _minOffset || candidate > 0) return;
 
     setState(() {
       _windowOffset = candidate;
@@ -377,7 +393,9 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
                                         accentColor: accentColor,
                                         textColor: scheme.onSurfaceRole,
                                         unit: _selectedMetric.unit,
+                                        metricId: _selectedMetric.apiMetric,
                                         isItalian: isItalian,
+                                        isDayView: _selectedPeriod == _TrendPeriod.day,
                                         highlightedIndex: _highlightedPointIndex,
                                         enableTouch: _selectedPeriod !=
                                             _TrendPeriod.day,
@@ -761,7 +779,9 @@ class _MetricTrendChart extends StatelessWidget {
     required this.accentColor,
     required this.textColor,
     required this.unit,
+    required this.metricId,
     required this.isItalian,
+    required this.isDayView,
     this.highlightedIndex,
     required this.onPointSelected,
     this.enableTouch = true,
@@ -772,7 +792,9 @@ class _MetricTrendChart extends StatelessWidget {
   final Color accentColor;
   final Color textColor;
   final String unit;
+  final String metricId;
   final bool isItalian;
+  final bool isDayView;
   final bool enableTouch;
   final int? maxLabels;
   final int? highlightedIndex;
@@ -795,21 +817,55 @@ class _MetricTrendChart extends StatelessWidget {
         points.map((p) => p.value).reduce((a, b) => a < b ? a : b);
     final double maxValue =
         points.map((p) => p.value).reduce((a, b) => a > b ? a : b);
-    final double range = (maxValue - minValue).abs();
-    final double padding = range < 8 ? 4 : range * 0.2;
-    final double interval =
-        ((maxValue + padding) - (minValue - padding)) / 4;
+
+    // ASSI FISSI STABILI
+    double effectiveMinY = 0.0;
+    double effectiveMaxY = 100.0;
+    double intervalY = 25.0;
+
+    if (metricId == 'stress') {
+      effectiveMinY = 0.0;
+      effectiveMaxY = 100.0;
+      intervalY = 25.0;
+    } else if (metricId == 'sleep') {
+      effectiveMinY = 0.0;
+      effectiveMaxY = maxValue <= 8.0 ? 10.0 : (maxValue + 2.0).ceilToDouble();
+      intervalY = (effectiveMaxY / 5).ceilToDouble();
+    } else if (metricId == 'steps') {
+      if (isDayView) {
+        effectiveMinY = 0.0;
+        effectiveMaxY = maxValue < 20 ? 20.0 : (maxValue + 10.0).ceilToDouble();
+        intervalY = (effectiveMaxY / 4).ceilToDouble();
+      } else {
+        effectiveMinY = 0.0;
+        effectiveMaxY = maxValue <= 8000.0 ? 10000.0 : (maxValue + 2000.0).ceilToDouble();
+        intervalY = (effectiveMaxY / 4).ceilToDouble();
+      }
+    } else if (metricId == 'heart_rate') {
+      effectiveMinY = minValue >= 50.0 ? 40.0 : (minValue < 10.0 ? 0.0 : (minValue - 10.0).floorToDouble());
+      effectiveMaxY = maxValue <= 120.0 ? 140.0 : (maxValue + 20.0).ceilToDouble();
+      intervalY = ((effectiveMaxY - effectiveMinY) / 4).ceilToDouble();
+    }
+
+    if (intervalY <= 0) intervalY = 1.0;
+    if (effectiveMinY >= effectiveMaxY) effectiveMaxY = effectiveMinY + 1.0;
+
+    double intervalX = 1.0;
+    if (maxLabels != null && maxLabels! > 0 && points.length > maxLabels!) {
+      intervalX = (points.length / maxLabels!).ceilToDouble();
+    }
+    if (intervalX <= 0) intervalX = 1.0;
 
     return LineChart(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
       LineChartData(
-        minY: (minValue - padding < 0) ? 0.0 : (minValue - padding),
-        maxY: maxValue + padding,
+        minY: effectiveMinY,
+        maxY: effectiveMaxY,
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
-          horizontalInterval: interval == 0 ? 1 : interval,
+          horizontalInterval: intervalY,
           getDrawingHorizontalLine: (value) => FlLine(
               color: textColor.withValues(alpha: 0.16), strokeWidth: 1),
         ),
@@ -855,7 +911,7 @@ class _MetricTrendChart extends StatelessWidget {
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 34,
-              interval: interval == 0 ? 1 : interval,
+              interval: intervalY,
               getTitlesWidget: (value, meta) {
                 return Text(
                   value.toInt().toString(),
@@ -868,7 +924,7 @@ class _MetricTrendChart extends StatelessWidget {
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 25,
-              interval: 1,
+              interval: intervalX,
               getTitlesWidget: (value, meta) {
                 if (value != value.toInt().toDouble()) {
                   return const SizedBox.shrink();
