@@ -557,18 +557,22 @@ class _ProfileState extends State<Profile> {
     }
   }
 
-  void _mostraSceltaAvatar(
+void _mostraSceltaAvatar(
       BuildContext context, UserDataProvider userData, bool isItalian) {
-    final colorScheme   = Theme.of(context).colorScheme;
+    final colorScheme = Theme.of(context).colorScheme;
     final defaultAssets = [
+      'assets/images/profilo1.png',
+      'assets/images/profilo2.png',
+      'assets/images/profilo3.png',
+      'assets/images/profilo4.png',
       'assets/images/Yumi.jpeg',
-      'assets/images/Mare.jpeg',
       'assets/images/Bellona.jpeg',
     ];
 
     showModalBottomSheet(
       context: context,
       backgroundColor: colorScheme.surfaceContainerLow,
+      isScrollControlled: true, 
       shape: const RoundedRectangleBorder(
           borderRadius:
               BorderRadius.vertical(top: Radius.circular(25))),
@@ -593,44 +597,56 @@ class _ProfileState extends State<Profile> {
                     fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: defaultAssets.map((assetPath) {
-                  final isSelected =
-                      userData.avatarData == 'asset:$assetPath';
-                  return GestureDetector(
-                    onTap: () {
-                      userData.setAvatar('asset:$assetPath');
-                      Navigator.pop(context);
-                    },
-                    child: Container(
-                      margin:
-                          const EdgeInsets.symmetric(horizontal: 10),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isSelected
-                              ? colorScheme.primary
-                              : Colors.transparent,
-                          width: 3,
+              
+              
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: GridView.builder(
+                  shrinkWrap: true, 
+                  physics: const NeverScrollableScrollPhysics(), 
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3, 
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
+                  ),
+                  itemCount: defaultAssets.length,
+                  itemBuilder: (context, index) {
+                    final assetPath = defaultAssets[index];
+                    final isSelected =
+                        userData.avatarData == 'asset:$assetPath';
+                    return GestureDetector(
+                      onTap: () {
+                        userData.setAvatar('asset:$assetPath');
+                        Navigator.pop(context);
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isSelected
+                                ? colorScheme.primary
+                                : Colors.transparent,
+                            width: 3,
+                          ),
+                        ),
+                        child: CircleAvatar(
+                          radius: 35,
+                          backgroundColor: colorScheme.primaryContainer,
+                          child: ClipOval(
+                            child: Image.asset(assetPath,
+                                fit: BoxFit.cover,
+                                width: 70,
+                                height: 70,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                    Icons.image_not_supported)),
+                          ),
                         ),
                       ),
-                      child: CircleAvatar(
-                        radius: 35,
-                        backgroundColor: colorScheme.primaryContainer,
-                        child: ClipOval(
-                          child: Image.asset(assetPath,
-                              fit: BoxFit.cover,
-                              width: 70,
-                              height: 70,
-                              errorBuilder: (_, __, ___) => const Icon(
-                                  Icons.image_not_supported)),
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
+                    );
+                  },
+                ),
               ),
+              
               const SizedBox(height: 24),
               const Divider(indent: 20, endIndent: 20),
               ListTile(

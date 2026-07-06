@@ -234,7 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Container(
           color: Colors.transparent,
           child: Image.asset(
-            'assets/images/Kairos_up.jpeg',
+            'assets/images/Kairos_up.png',
             height: 150,
             fit: BoxFit.contain,
           ),
