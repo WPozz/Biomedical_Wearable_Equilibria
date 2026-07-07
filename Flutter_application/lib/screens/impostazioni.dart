@@ -4,8 +4,8 @@ import 'package:flutter_application/providers/settings_provider.dart';
 import 'package:flutter_application/screens/goals.dart';
 import 'package:flutter_application/screens/notifiche.dart';
 
-class ImpostazioniScreen extends StatelessWidget {
-  const ImpostazioniScreen({super.key});
+class SettingsScreen extends StatelessWidget {
+  const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +30,7 @@ class ImpostazioniScreen extends StatelessWidget {
             children: [
               const SizedBox(height: 10),
 
-              // --- SEZIONE 1: IMPOSTAZIONI GENERALI ---
+              // --- General settings ---
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Card(
@@ -42,7 +42,8 @@ class ImpostazioniScreen extends StatelessWidget {
                   clipBehavior: Clip.antiAlias,
                   child: Column(
                     children: [
-                      // 1. Goals
+                      
+                      // Goals
                       _buildSettingsTile(
                         context: context,
                         title: isItalian ? 'Obiettivi' : 'Goals',
@@ -58,7 +59,7 @@ class ImpostazioniScreen extends StatelessWidget {
                       
                       const Divider(height: 1, indent: 60, endIndent: 20),
 
-                      // 2. Notifications
+                      // Notifications
                       _buildSettingsTile(
                         context: context,
                         title: isItalian ? 'Notifiche' : 'Notifications',
@@ -74,12 +75,12 @@ class ImpostazioniScreen extends StatelessWidget {
 
                       const Divider(height: 1, indent: 60, endIndent: 20),
 
-                      // 3. Language 
+                      // Language 
                       _buildLanguageTile(context, settings, colorScheme),
 
                       const Divider(height: 1, indent: 60, endIndent: 20),
 
-                      // 4. Change password
+                      // Change password
                       _buildSettingsTile(
                         context: context,
                         title: isItalian ? 'Cambia password' : 'Change password',
@@ -94,7 +95,7 @@ class ImpostazioniScreen extends StatelessWidget {
 
               const SizedBox(height: 32),
 
-              // --- SEZIONE 2: PRIVACY E HR ---
+              // --- PRIVACY and HR ---
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Text(
@@ -136,13 +137,10 @@ class ImpostazioniScreen extends StatelessWidget {
                     ),
                     value: settings.shareHRData,
                     activeColor: colorScheme.primary,
-                    // MODIFICA LOGICA: Controlliamo se si sta accendendo o spegnendo
                     onChanged: (newValue) {
                       if (newValue == true) {
-                        // Vuole accenderlo: apriamo il dialogo
-                        _mostraDialogoConsensoHR(context, settings, colorScheme);
+                        _showHRConsentDialog(context, settings, colorScheme);
                       } else {
-                        // Vuole spegnerlo: spegniamo subito senza chiedere nulla
                         context.read<SettingsProvider>().setShareHRData(false);
                       }
                     },
@@ -152,7 +150,6 @@ class ImpostazioniScreen extends StatelessWidget {
               
               const SizedBox(height: 12),
 
-              // Nota informativa
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 28),
                 child: Text(
@@ -171,8 +168,8 @@ class ImpostazioniScreen extends StatelessWidget {
     );
   }
 
-  // --- Finestra di dialogo per il consenso HR ---
-  void _mostraDialogoConsensoHR(BuildContext context, SettingsProvider settings, ColorScheme colorScheme) {
+  // --- Consent dialog ---
+  void _showHRConsentDialog(BuildContext context, SettingsProvider settings, ColorScheme colorScheme) {
     final isItalian = settings.isItalian;
 
     showDialog(
@@ -184,7 +181,6 @@ class ImpostazioniScreen extends StatelessWidget {
             isItalian ? "Consenso condivisione — Kairos" : "Data sharing consent — Kairos",
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
-          // Usiamo ScrollView per evitare che il testo sbordi su schermi piccoli
           content: SingleChildScrollView(
             child: RichText(
               text: TextSpan(
@@ -257,7 +253,6 @@ class ImpostazioniScreen extends StatelessWidget {
                 style: const TextStyle(color: Colors.grey),
               ),
               onPressed: () {
-                // Chiude semplicemente la finestra, il bottone resta su OFF
                 Navigator.pop(context);
               },
             ),
@@ -268,7 +263,6 @@ class ImpostazioniScreen extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               onPressed: () {
-                // Manda il segnale di accensione al provider e chiude
                 context.read<SettingsProvider>().setShareHRData(true);
                 Navigator.pop(context);
               },
@@ -279,7 +273,7 @@ class ImpostazioniScreen extends StatelessWidget {
     );
   }
 
-  // --- Tile LINGUA con bottom sheet ---
+  // --- Tile Language with bottom sheet ---
   Widget _buildLanguageTile(BuildContext context, SettingsProvider settings, ColorScheme colorScheme) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
@@ -303,11 +297,11 @@ class ImpostazioniScreen extends StatelessWidget {
           const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
         ],
       ),
-      onTap: () => _mostraSceltaLingua(context, settings, colorScheme),
+      onTap: () => _showLanguageChoice(context, settings, colorScheme),
     );
   }
 
-  void _mostraSceltaLingua(BuildContext context, SettingsProvider settings, ColorScheme colorScheme) {
+  void _showLanguageChoice(BuildContext context, SettingsProvider settings, ColorScheme colorScheme) {
     showModalBottomSheet(
       context: context,
       backgroundColor: colorScheme.surfaceContainerLow,
@@ -351,7 +345,7 @@ class ImpostazioniScreen extends StatelessWidget {
     );
   }
 
-  // --- Tile generica ---
+  // --- Generic Tile (model) ---
   Widget _buildSettingsTile({
     required BuildContext context,
     required String title,
