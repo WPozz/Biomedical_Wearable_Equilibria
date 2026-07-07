@@ -23,7 +23,6 @@ class _HomeScreenState extends State<HomeScreen> {
   double _radiusMultiplier = 1.0;
   late Timer _timer;
 
-  // Stato dei dati giornalieri
   bool _isLoadingDaily = true;
   String? _dailyErrorMessage;
   int _stressLevel = 0;
@@ -32,13 +31,11 @@ class _HomeScreenState extends State<HomeScreen> {
   double _calories = 0;
   double _distanceKm = 0;
 
-  // Flag "dato mancante" per singola metrica
   bool _sleepMissing = true;
   bool _stepsMissing = true;
   bool _caloriesMissing = true;
   bool _distanceMissing = true;
 
-  // Stato del report settimanale (card "ultimo report")
   bool _isLoadingReport = true;
 
   late final DateTime _syncedDay;
