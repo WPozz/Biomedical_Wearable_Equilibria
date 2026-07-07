@@ -3,32 +3,32 @@ import 'package:provider/provider.dart';
 import 'package:flutter_application/providers/userdata_provider.dart';
 import 'package:flutter_application/providers/settings_provider.dart';
 
-class DatiPersonaliScreen extends StatefulWidget {
-  const DatiPersonaliScreen({super.key});
+class PersonalDataScreen extends StatefulWidget {
+  const PersonalDataScreen({super.key});
 
   @override
-  State<DatiPersonaliScreen> createState() => _DatiPersonaliScreenState();
+  State<PersonalDataScreen> createState() => _PersonalDataScreenState();
 }
 
-class _DatiPersonaliScreenState extends State<DatiPersonaliScreen> {
+class _PersonalDataScreenState extends State<PersonalDataScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  final TextEditingController _nomeController = TextEditingController();
-  final TextEditingController _cognomeController = TextEditingController();
-  final TextEditingController _etaController = TextEditingController();
-  final TextEditingController _altezzaController = TextEditingController();
-  final TextEditingController _pesoController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _surnameController = TextEditingController();
+  final TextEditingController _ageController = TextEditingController();
+  final TextEditingController _heightController = TextEditingController();
+  final TextEditingController _weightController = TextEditingController();
 
-  String? _sessoSelezionato;
-  String? _aziendaSelezionata;
-  String? _repartoSelezionato;
+  String? _selectedGender;
+  String? _selectedCompany;
+  String? _selectedDepartment;
   
-  String _altezzaUnit = 'cm'; 
-  String _pesoUnit = 'kg';
+  String _heightUnit = 'cm'; 
+  String _weightUnit = 'kg';
 
-  final List<String> _opzioniSesso = ['Male', 'Female', 'Other/Prefer not to say'];
+  final List<String> _genderOptions = ['Male', 'Female', 'Other/Prefer not to say'];
   
-  final Map<String, List<String>> _aziendeEReparti = {
+  final Map<String, List<String>> _companyAndDepartment = {
     'Healthcare Hospital X': ['Cardiology', 'Emergency Department', 'Administration'],
     'Tech Solutions Inc.': ['Software Development', 'Human Resources', 'Marketing'],
     'Manufacturing Ltd.': ['Production', 'Logistics', 'Quality Control'],
@@ -65,48 +65,48 @@ class _DatiPersonaliScreenState extends State<DatiPersonaliScreen> {
     
     final userData = Provider.of<UserDataProvider>(context, listen: false);
 
-    _nomeController.text = userData.firstName;
-    _cognomeController.text = userData.lastName;
+    _nameController.text = userData.firstName;
+    _surnameController.text = userData.lastName;
     
-    if (userData.age != null) _etaController.text = userData.age.toString();
-    if (userData.height != null) _altezzaController.text = userData.height.toString();
-    if (userData.weight != null) _pesoController.text = userData.weight.toString();
+    if (userData.age != null) _ageController.text = userData.age.toString();
+    if (userData.height != null) _heightController.text = userData.height.toString();
+    if (userData.weight != null) _weightController.text = userData.weight.toString();
     
-    _sessoSelezionato = userData.gender;
-    _aziendaSelezionata = userData.company;
-    _repartoSelezionato = userData.department;
+    _selectedGender = userData.gender;
+    _selectedCompany= userData.company;
+    _selectedDepartment = userData.department;
     
-    _altezzaUnit = userData.heightUnit;
-    _pesoUnit = userData.weightUnit;
+    _heightUnit = userData.heightUnit;
+    _weightUnit = userData.weightUnit;
   }
 
   @override
   void dispose() {
-    _nomeController.dispose();
-    _cognomeController.dispose();
-    _etaController.dispose();
-    _altezzaController.dispose();
-    _pesoController.dispose();
+    _nameController.dispose();
+    _surnameController.dispose();
+    _ageController.dispose();
+    _heightController.dispose();
+    _weightController.dispose();
     super.dispose();
   }
 
-  void _salvaDati() async {
+  void _saveData() async {
     if (_formKey.currentState!.validate()) {
-      int eta = int.parse(_etaController.text);
-      double altezza = double.parse(_altezzaController.text);
-      double peso = double.parse(_pesoController.text);
+      int age = int.parse(_ageController.text);
+      double height = double.parse(_heightController.text);
+      double weight = double.parse(_weightController.text);
 
       await Provider.of<UserDataProvider>(context, listen: false).updateProfile(
-        firstName: _nomeController.text.trim(),
-        lastName: _cognomeController.text.trim(),
-        age: eta,
-        gender: _sessoSelezionato!,
-        height: altezza,
-        weight: peso,
-        company: _aziendaSelezionata!,
-        department: _repartoSelezionato!,
-        heightUnit: _altezzaUnit, 
-        weightUnit: _pesoUnit,    
+        firstName: _nameController.text.trim(),
+        lastName: _surnameController.text.trim(),
+        age: age,
+        gender: _selectedGender!,
+        height: height,
+        weight: weight,
+        company: _selectedCompany!,
+        department: _selectedDepartment!,
+        heightUnit: _heightUnit, 
+        weightUnit: _weightUnit,    
       );
 
       if (!mounted) return;
@@ -175,7 +175,7 @@ class _DatiPersonaliScreenState extends State<DatiPersonaliScreen> {
                   children: [
                     Expanded(
                       child: TextFormField(
-                        controller: _nomeController,
+                        controller: _nameController,
                         keyboardType: TextInputType.name,
                         decoration: _buildInputDecoration(isItalian ? 'Nome *' : 'First Name *'),
                         validator: (value) => value!.isEmpty ? (isItalian ? 'Richiesto' : 'Required') : null,
@@ -184,7 +184,7 @@ class _DatiPersonaliScreenState extends State<DatiPersonaliScreen> {
                     const SizedBox(width: 15),
                     Expanded(
                       child: TextFormField(
-                        controller: _cognomeController,
+                        controller: _surnameController,
                         keyboardType: TextInputType.name,
                         decoration: _buildInputDecoration(isItalian ? 'Cognome *' : 'Last Name *'),
                         validator: (value) => value!.isEmpty ? (isItalian ? 'Richiesto' : 'Required') : null,
@@ -195,7 +195,7 @@ class _DatiPersonaliScreenState extends State<DatiPersonaliScreen> {
                 const SizedBox(height: 20),
 
                 TextFormField(
-                  controller: _etaController,
+                  controller: _ageController,
                   keyboardType: TextInputType.number,
                   decoration: _buildInputDecoration(isItalian ? 'Età *' : 'Age *'),
                   validator: (value) => value!.isEmpty ? (isItalian ? 'Inserisci la tua età' : 'Enter your age') : null,
@@ -204,22 +204,21 @@ class _DatiPersonaliScreenState extends State<DatiPersonaliScreen> {
 
                 DropdownButtonFormField<String>(
                   decoration: _buildInputDecoration(isItalian ? 'Sesso *' : 'Gender *'),
-                  initialValue: _sessoSelezionato,
-                  items: _opzioniSesso.map((s) => DropdownMenuItem(
+                  initialValue: _selectedGender,
+                  items: _genderOptions.map((s) => DropdownMenuItem(
                     value: s, 
                     child: Text(_translateGender(s, isItalian)) 
                   )).toList(),
-                  onChanged: (val) => setState(() => _sessoSelezionato = val),
+                  onChanged: (val) => setState(() => _selectedGender = val),
                   validator: (value) => value == null ? (isItalian ? 'Seleziona sesso' : 'Select gender') : null,
                 ),
                 const SizedBox(height: 20),
 
-                // --- ALTEZZA E PESO CON TENDINA INTEGRATA ---
                 Row(
                   children: [
                     Expanded(
                       child: TextFormField(
-                        controller: _altezzaController,
+                        controller: _heightController,
                         keyboardType: TextInputType.number,
                         
                         decoration: _buildInputDecoration(
@@ -228,9 +227,9 @@ class _DatiPersonaliScreenState extends State<DatiPersonaliScreen> {
                             padding: const EdgeInsets.only(right: 12.0),
                             child: DropdownButtonHideUnderline(
                               child: DropdownButton<String>(
-                                value: _altezzaUnit,
+                                value: _heightUnit,
                                 items: ['cm', 'ft'].map((u) => DropdownMenuItem(value: u, child: Text(u, style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.primary)))).toList(),
-                                onChanged: (val) => setState(() => _altezzaUnit = val!),
+                                onChanged: (val) => setState(() => _heightUnit = val!),
                                 icon: Icon(Icons.keyboard_arrow_down, size: 20, color: colorScheme.primary),
                               ),
                             ),
@@ -240,9 +239,10 @@ class _DatiPersonaliScreenState extends State<DatiPersonaliScreen> {
                       ),
                     ),
                     const SizedBox(width: 15),
+                    
                     Expanded(
                       child: TextFormField(
-                        controller: _pesoController,
+                        controller: _weightController,
                         keyboardType: TextInputType.number,
                         decoration: _buildInputDecoration(
                           isItalian ? 'Peso *' : 'Weight *',
@@ -250,9 +250,9 @@ class _DatiPersonaliScreenState extends State<DatiPersonaliScreen> {
                             padding: const EdgeInsets.only(right: 12.0),
                             child: DropdownButtonHideUnderline(
                               child: DropdownButton<String>(
-                                value: _pesoUnit,
+                                value: _weightUnit,
                                 items: ['kg', 'lbs'].map((u) => DropdownMenuItem(value: u, child: Text(u, style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.primary)))).toList(),
-                                onChanged: (val) => setState(() => _pesoUnit = val!),
+                                onChanged: (val) => setState(() => _weightUnit = val!),
                                 icon: Icon(Icons.keyboard_arrow_down, size: 20, color: colorScheme.primary),
                               ),
                             ),
@@ -267,12 +267,12 @@ class _DatiPersonaliScreenState extends State<DatiPersonaliScreen> {
 
                 DropdownButtonFormField<String>(
                   decoration: _buildInputDecoration(isItalian ? 'Azienda *' : 'Company *'),
-                  initialValue: _aziendaSelezionata,
-                  items: _aziendeEReparti.keys.map((a) => DropdownMenuItem(value: a, child: Text(a))).toList(),
+                  initialValue: _selectedCompany,
+                  items: _companyAndDepartment.keys.map((a) => DropdownMenuItem(value: a, child: Text(a))).toList(),
                   onChanged: (val) {
                     setState(() {
-                      _aziendaSelezionata = val;
-                      _repartoSelezionato = null; 
+                      _selectedCompany = val;
+                      _selectedDepartment = null; 
                     });
                   },
                   validator: (value) => value == null ? (isItalian ? 'Seleziona la tua azienda' : 'Select your company') : null,
@@ -281,22 +281,22 @@ class _DatiPersonaliScreenState extends State<DatiPersonaliScreen> {
 
                 DropdownButtonFormField<String>(
                   decoration: _buildInputDecoration(isItalian ? 'Reparto *' : 'Department *'),
-                  initialValue: _repartoSelezionato,
+                  initialValue: _selectedDepartment,
                   disabledHint: Text(isItalian ? "Seleziona prima un'azienda" : "Select a company first"),
-                  items: _aziendaSelezionata == null 
+                  items: _selectedCompany == null 
                     ? [] 
-                    : _aziendeEReparti[_aziendaSelezionata]!.map((r) => DropdownMenuItem(
+                    : _companyAndDepartment[_selectedCompany]!.map((r) => DropdownMenuItem(
                         value: r, 
                         child: Text(_translateDept(r, isItalian)) 
                       )).toList(),
-                  onChanged: (val) => setState(() => _repartoSelezionato = val),
+                  onChanged: (val) => setState(() => _selectedDepartment = val),
                   validator: (value) => value == null ? (isItalian ? 'Seleziona il tuo reparto' : 'Select your department') : null,
                 ),
 
                 const SizedBox(height: 40),
 
                 ElevatedButton(
-                  onPressed: _salvaDati,
+                  onPressed: _saveData,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colorScheme.primary,
                     foregroundColor: colorScheme.onPrimary,
