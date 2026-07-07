@@ -20,18 +20,10 @@ class Profile extends StatefulWidget {
 }
 
 class _ProfileState extends State<Profile> {
-  // ── NOTA SUL FIX ───────────────────────────────────────────────────────
-  // Prima questa schermata teneva il report in uno stato locale (_ultimoReport)
-  // calcolato in autonomia, senza nessun legame con DataProvider. Risultato:
-  // - la Home (che leggeva dataProvider.lastWeeklyReport) non vedeva mai
-  //   questo report, perché non veniva mai scritto lì
-  // - l'Archivio ricalcolava la stessa identica settimana da capo
-  // Ora deleghiamo tutto a DataProvider.getOrFetchLatestReport(), che
-  // calcola una sola volta e condivide il risultato con tutte le schermate.
+  
   bool _isLoadingReport = true;
   String? _errorMessage;
 
-  // Variabili per il "fermo immagine" dei goal
   int? _lastSteps;
   double? _lastSleep;
   bool? _lastGoalsEnabled;
@@ -39,10 +31,10 @@ class _ProfileState extends State<Profile> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadUltimoReport());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadLastReport());
   }
 
-  Future<void> _loadUltimoReport({bool forceRefresh = false}) async {
+  Future<void> _loadLastReport({bool forceRefresh = false}) async {
     if (!mounted) return;
 
     setState(() {
@@ -64,7 +56,6 @@ class _ProfileState extends State<Profile> {
       setState(() {
         _isLoadingReport = false;
 
-        // Salviamo i goal utilizzati per questo calcolo
         _lastSteps        = settings.steps;
         _lastSleep        = settings.sleepHours.toDouble();
         _lastGoalsEnabled = settings.customGoalsEnabled;
@@ -77,8 +68,6 @@ class _ProfileState extends State<Profile> {
       });
     }
   }
-
-  // ── Colori basati su WeekPerformance ───────────────────────────────────────
 
   Color _bgColor(WeeklyReport r, BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -140,9 +129,7 @@ class _ProfileState extends State<Profile> {
     final colorScheme = Theme.of(context).colorScheme;
     final isItalian   = context.watch<SettingsProvider>().isItalian;
 
-    // Leggiamo il report dalla cache condivisa: se un'altra schermata
-    // (es. la Home) lo ha già caricato/aggiornato, lo vediamo qui subito,
-    // senza dover rifare la chiamata di rete.
+    // Read the report from a shared cache
     final report = context.watch<DataProvider>().lastWeeklyReport;
 
     return Scaffold(
@@ -159,12 +146,12 @@ class _ProfileState extends State<Profile> {
             children: [
               const SizedBox(height: 20),
 
-              // ── Avatar ──────────────────────────────────────────────────
+              // ── Avatar
               Consumer<UserDataProvider>(
                 builder: (context, userData, child) {
                   return GestureDetector(
                     onTap: () =>
-                        _mostraSceltaAvatar(context, userData, isItalian),
+                        _showAvatarChoice(context, userData, isItalian),
                     child: Stack(
                       alignment: Alignment.bottomRight,
                       children: [
@@ -202,7 +189,7 @@ class _ProfileState extends State<Profile> {
               ),
               const SizedBox(height: 12),
 
-              // ── Nome e azienda ───────────────────────────────────────────
+              // ── Name and company
               Consumer<UserDataProvider>(
                 builder: (context, userData, child) {
                   return Column(
@@ -229,7 +216,7 @@ class _ProfileState extends State<Profile> {
               ),
               const SizedBox(height: 25),
 
-              // ── Card ultimo report ───────────────────────────────────────
+              // ── Card last report
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: _buildReportCard(context, isItalian, colorScheme, report),
@@ -273,7 +260,9 @@ class _ProfileState extends State<Profile> {
                               builder: (_) => const ReportArchivioScreen()),
                         ),
                       ),
+                      
                       const Divider(height: 1, indent: 60, endIndent: 20),
+                      
                       _buildProfileTile(
                         context: context,
                         title: isItalian
@@ -287,49 +276,47 @@ class _ProfileState extends State<Profile> {
                               builder: (_) => const DatiPersonaliScreen()),
                         ),
                       ),
+                      
                       const Divider(height: 1, indent: 60, endIndent: 20),
+                      
                       _buildProfileTile(
                         context: context,
                         title: isItalian ? 'Impostazioni' : 'Settings',
                         icon: Icons.settings,
                         color: colorScheme.primary,
                         onTap: () async {
-                          // 1. Apriamo le impostazioni e aspettiamo
                           await Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (_) => const ImpostazioniScreen()),
+                                builder: (_) => const SettingsScreen()),
                           );
 
-                          // Assicuriamoci che il widget sia ancora vivo
                           if (!context.mounted) return;
 
-                          // 2. Leggiamo i valori attuali dopo il ritorno
                           final settings = context.read<SettingsProvider>();
-
-                          // 3. Verifichiamo se l'utente ha modificato i goal
-                          final haCambiatoQualcosa =
+                          
+                          final hasChanged =
                               _lastSteps != settings.steps ||
                               _lastSleep != settings.sleepHours.toDouble() ||
                               _lastGoalsEnabled != settings.customGoalsEnabled;
 
-                          // 4. Ricarichiamo SOLO se ci sono stati cambiamenti.
-                          // Invalidiamo anche la cache condivisa (Home/Archivio
-                          // dipendono dagli stessi goal) e forziamo un refresh.
-                          if (haCambiatoQualcosa) {
+                          // New report if something has changed
+                          if (hasChanged) {
                             context.read<DataProvider>().clearArchiveCache();
-                            _loadUltimoReport(forceRefresh: true);
+                            _loadLastReport(forceRefresh: true);
                           }
                         },
                       ),
+                      
                       const Divider(height: 1, indent: 60, endIndent: 20),
+                      
                       _buildProfileTile(
                         context: context,
                         title: isItalian ? 'Esci dall\'account' : 'Log out',
                         icon: Icons.logout,
                         color: Colors.redAccent,
                         onTap: () =>
-                            _mostraDialogoLogout(context, isItalian),
+                            _showLogoutDialog(context, isItalian),
                       ),
                     ],
                   ),
@@ -343,7 +330,7 @@ class _ProfileState extends State<Profile> {
     );
   }
 
-  // ── Card ultimo report: loading / errore / no data / dati reali ──────────
+  // ── Card last report: loading / errore / no data / real data
 
   Widget _buildReportCard(BuildContext context, bool isItalian,
       ColorScheme colorScheme, WeeklyReport? report) {
@@ -380,7 +367,7 @@ class _ProfileState extends State<Profile> {
             ),
             IconButton(
               icon: const Icon(Icons.refresh),
-              onPressed: () => _loadUltimoReport(forceRefresh: true),
+              onPressed: () => _loadLastReport(forceRefresh: true),
             ),
           ],
         ),
@@ -531,7 +518,7 @@ class _ProfileState extends State<Profile> {
     );
   }
 
-  // ── Avatar helpers ─────────────────────────────────────────────────────────
+  // ── Avatar helpers
 
   Widget _buildAvatarImage(String? avatarData, ColorScheme colorScheme) {
     if (avatarData == null ||
@@ -557,7 +544,7 @@ class _ProfileState extends State<Profile> {
     }
   }
 
-void _mostraSceltaAvatar(
+void _showAvatarChoice(
       BuildContext context, UserDataProvider userData, bool isItalian) {
     final colorScheme = Theme.of(context).colorScheme;
     final defaultAssets = [
@@ -710,7 +697,7 @@ void _mostraSceltaAvatar(
     );
   }
 
-  void _mostraDialogoLogout(BuildContext context, bool isItalian) {
+  void _showLogoutDialog(BuildContext context, bool isItalian) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -743,7 +730,7 @@ void _mostraSceltaAvatar(
   }
 }
 
-// ── _MiniStat ─────────────────────────────────────────────────────────────────
+// ── _MiniStat 
 
 class _MiniStat extends StatelessWidget {
   final String value;
