@@ -1,4 +1,3 @@
-// Userdata_provider
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -16,7 +15,7 @@ class UserDataProvider extends ChangeNotifier {
   String heightUnit = "cm"; 
   String weightUnit = "kg";
 
-  // Variabile per salvare la scelta della foto profilo
+  // Profile image
   String avatarData = "default"; // "default", "asset:assets/images/...", o "/percorso/galleria.jpg"
 
   UserDataProvider() {
@@ -38,7 +37,6 @@ class UserDataProvider extends ChangeNotifier {
     heightUnit = prefs.getString('height_unit') ?? "cm";
     weightUnit = prefs.getString('weight_unit') ?? "kg";
     
-    // Carichiamo l'avatar salvato in precedenza
     avatarData = prefs.getString('user_avatar') ?? "default";
     
     notifyListeners();
@@ -83,7 +81,6 @@ class UserDataProvider extends ChangeNotifier {
     await prefs.setString('weight_unit', weightUnit); 
   }
 
-  // Metodo per salvare l'avatar 
   Future<void> setAvatar(String data) async {
     avatarData = data;
     notifyListeners(); 
