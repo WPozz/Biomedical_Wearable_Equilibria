@@ -31,7 +31,7 @@ class NotificheScreen extends StatelessWidget {
           ),
           const SizedBox(height: 30),
 
-          // ── Card notifiche ──────────────────────────
+          // ── Notifications card ──────────────────────────
           Card(
             elevation: 0,
             color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
@@ -39,7 +39,7 @@ class NotificheScreen extends StatelessWidget {
             clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
-                // Abilita notifiche (interruttore generale)
+                // Master switch
                 _buildSwitch(
                   context: context,
                   icon: Icons.notifications_active,
@@ -54,8 +54,7 @@ class NotificheScreen extends StatelessWidget {
                 ),
 
                 const Divider(height: 1, indent: 70, endIndent: 20),
-
-                // Promemoria pausa
+                
                 _buildSwitch(
                   context: context,
                   icon: Icons.timer,
@@ -72,7 +71,6 @@ class NotificheScreen extends StatelessWidget {
 
                 const Divider(height: 1, indent: 70, endIndent: 20),
 
-                // Idratazione
                 _buildSwitch(
                   context: context,
                   icon: Icons.water_drop,
@@ -89,7 +87,6 @@ class NotificheScreen extends StatelessWidget {
 
                 const Divider(height: 1, indent: 70, endIndent: 20),
 
-                // Obiettivi
                 _buildSwitch(
                   context: context,
                   icon: Icons.emoji_events_outlined,
