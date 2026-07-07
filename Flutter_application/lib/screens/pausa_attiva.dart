@@ -90,7 +90,7 @@ class ActiveBreakScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (context) => const SelezioneDoloreScreen()),
+                          builder: (context) => const PainSelectionScreen()),
                     );
                   },
                 ),

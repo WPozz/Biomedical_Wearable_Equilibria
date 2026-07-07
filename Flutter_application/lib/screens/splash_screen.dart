@@ -8,7 +8,6 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  // Variable to control the opacity for our fade-in animation
   double _opacity = 0.0;
 
   @override
@@ -23,7 +22,6 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _initializeApp() async {
-    // 2.5-second timer
     await Future.delayed(const Duration(milliseconds: 2500));
     if (mounted) {
       Navigator.pushReplacementNamed(context, '/auth_gate');

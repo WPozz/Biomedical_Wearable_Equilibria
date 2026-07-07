@@ -22,7 +22,7 @@ abstract class WeeklyReportBuilder {
     final DateTime prevStart = weekStart.subtract(const Duration(days: 7));
     final DateTime prevEnd   = weekEnd.subtract(const Duration(days: 7));
 
-    // Fetch settimana corrente
+    // Fetch current week
     final bundle = await dataProvider.fetchWeekBundle(startStr, endStr);
     final sleepPoints              = bundle.sleep;
     final stepsPoints              = bundle.steps;
@@ -30,7 +30,6 @@ abstract class WeeklyReportBuilder {
     final hrIntraday               = bundle.hrIntraday;
     final exerciseZoneMinutesByDate = bundle.exerciseZoneMinutesByDate;
 
-    // Stress calcolato localmente
     final stressPoints = _computeStressPoints(
       sleepPoints,
       stepsPoints,
@@ -40,7 +39,7 @@ abstract class WeeklyReportBuilder {
     );
     await Future.delayed(const Duration(milliseconds: 200));
 
-    // Fetch settimana precedente 
+    // Fetch previous week
     final prevSleep = await dataProvider.fetchMetricRange(
         'sleep', _fmt(prevStart), _fmt(prevEnd));
     await Future.delayed(const Duration(milliseconds: 150));
@@ -55,7 +54,7 @@ abstract class WeeklyReportBuilder {
       stressPoints: stressPoints,
     );
 
-    // Conta giorni senza dato sonno
+
     final Set<String> sleepDates = sleepPoints.map((p) => p.fullLabel).toSet();
     int missingSleepDays = 0;
     for (int i = 0; i < 7; i++) {
@@ -64,7 +63,7 @@ abstract class WeeklyReportBuilder {
       }
     }
 
-    // Conta giorni senza dato sonno — settimana precedente
+
     final Set<String> prevSleepDates = prevSleep.map((p) => p.fullLabel).toSet();
     int missingSleepDaysPrev = 0;
     for (int i = 0; i < 7; i++) {
@@ -73,7 +72,6 @@ abstract class WeeklyReportBuilder {
       }
     }
 
-    // Aggregati
     final double avgStress     = _avg(stressPoints.map((p) => p.value).toList());
     final double avgSleep      = _avg(sleepPoints.map((p) => p.value).toList());
     final double avgSteps      = _avg(stepsPoints.map((p) => p.value).toList());
@@ -81,7 +79,6 @@ abstract class WeeklyReportBuilder {
     final double prevAvgSleep  = _avg(prevSleep.map((p) => p.value).toList());
     final double prevAvgSteps  = _avg(prevSteps.map((p) => p.value).toList());
 
-    // Conteggio sessioni esercizio
     final int exerciseSessionsCount = exerciseZoneMinutesByDate.values
         .where((zones) => zones.values.any((v) => v > 0))
         .length;
@@ -99,7 +96,7 @@ abstract class WeeklyReportBuilder {
       _alignByDate(sleepPoints, stressPoints, weekStart),
     );
 
-    // Correlazione attività combinata (passi + TRIMP) ↔ stress
+    // (steps + TRIMP) ↔ stress
     final List<MetricPoint> activityPoints = [];
     for (int i = 0; i < 7; i++) {
       final String dateStr = _fmt(weekStart.add(Duration(days: i)));
@@ -207,7 +204,7 @@ abstract class WeeklyReportBuilder {
     DateTime? archiveEnd,
     int weekCount = 8,
   }) {
-    // Allinea sempre alla domenica coincidente o precedente
+
     final DateTime end = _lastSundayOnOrBefore(archiveEnd ?? kArchiveEnd);
     final List<({DateTime start, DateTime end})> ranges = [];
     DateTime weekEnd = end;
@@ -219,9 +216,8 @@ abstract class WeeklyReportBuilder {
     return ranges;
   }
 
-  // Domenica coincidente o immediatamente precedente a [d].
   static DateTime _lastSundayOnOrBefore(DateTime d) {
-    final int daysSinceSunday = d.weekday % 7; // Sunday->0, Monday->1, ... Saturday->6
+    final int daysSinceSunday = d.weekday % 7; 
     return d.subtract(Duration(days: daysSinceSunday));
   }
 

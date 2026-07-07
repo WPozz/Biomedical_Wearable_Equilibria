@@ -502,7 +502,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(
-              builder: (_) => ReportDettaglioScreen(report: report)),
+              builder: (_) => ReportDetailScreen(report: report)),
         ),
         borderRadius: BorderRadius.circular(24),
         child: Padding(

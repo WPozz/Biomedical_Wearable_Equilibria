@@ -87,14 +87,14 @@ class BodyZoneLayout {
       };
 }
 
-class SelezioneDoloreScreen extends StatefulWidget {
-  const SelezioneDoloreScreen({super.key});
+class PainSelectionScreen extends StatefulWidget {
+  const PainSelectionScreen({super.key});
 
   @override
-  State<SelezioneDoloreScreen> createState() => _SelezioneDoloreScreenState();
+  State<PainSelectionScreen> createState() => _PainSelectionScreenState();
 }
 
-class _SelezioneDoloreScreenState extends State<SelezioneDoloreScreen> {
+class _PainSelectionScreenState extends State<PainSelectionScreen> {
   String _zonaSelezionata = "";
 
   static const double canvasW = 300.0;

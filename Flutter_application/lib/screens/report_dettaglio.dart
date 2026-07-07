@@ -4,10 +4,10 @@ import 'package:flutter_application/providers/settings_provider.dart';
 import 'package:flutter_application/utils/weekly_report_model.dart';
 import 'package:flutter_application/screens/goals.dart';
 
-class ReportDettaglioScreen extends StatelessWidget {
+class ReportDetailScreen extends StatelessWidget {
   final WeeklyReport report;
 
-  const ReportDettaglioScreen({super.key, required this.report});
+  const ReportDetailScreen({super.key, required this.report});
 
   @override
   Widget build(BuildContext context) {

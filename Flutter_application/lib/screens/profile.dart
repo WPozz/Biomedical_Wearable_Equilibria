@@ -257,7 +257,7 @@ class _ProfileState extends State<Profile> {
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (_) => const ReportArchivioScreen()),
+                              builder: (_) => const ReportArchiveScreen()),
                         ),
                       ),
                       
@@ -428,7 +428,7 @@ class _ProfileState extends State<Profile> {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(
-              builder: (_) => ReportDettaglioScreen(report: r)),
+              builder: (_) => ReportDetailScreen(report: r)),
         ),
         child: Padding(
           padding: const EdgeInsets.all(20),

@@ -5,14 +5,14 @@ import 'package:flutter_application/providers/data_provider.dart';
 import 'package:flutter_application/utils/weekly_report_model.dart';
 import 'report_dettaglio.dart';
 
-class ReportArchivioScreen extends StatefulWidget {
-  const ReportArchivioScreen({super.key});
+class ReportArchiveScreen extends StatefulWidget {
+  const ReportArchiveScreen({super.key});
 
   @override
-  State<ReportArchivioScreen> createState() => _ReportArchivioScreenState();
+  State<ReportArchiveScreen> createState() => _ReportArchiveScreenState();
 }
 
-class _ReportArchivioScreenState extends State<ReportArchivioScreen> {
+class _ReportArchiveScreenState extends State<ReportArchiveScreen> {
   List<WeeklyReport>? _reports;
   bool _isLoading = true;
   String? _errorMessage;
@@ -23,17 +23,6 @@ class _ReportArchivioScreenState extends State<ReportArchivioScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadReports());
   }
 
-  // ── NOTA SUL FIX ───────────────────────────────────────────────────────
-  // Prima questa schermata leggeva/scriveva direttamente il campo pubblico
-  // dataProvider.cachedArchive, che non notificava mai nessun listener e
-  // non era in nessun modo coordinato con Profile (che calcolava la stessa
-  // prima settimana per conto suo). Ora deleghiamo tutto a
-  // DataProvider.getOrFetchArchive(), che:
-  // - riusa l'eventuale report "ultima settimana" già calcolato da Profile
-  //   o dalla Home, evitando di rifare le stesse ~9 chiamate di rete
-  // - notifica correttamente tutti i listener quando i dati cambiano
-  // - popola via via la lista tramite onProgress, mantenendo lo stesso
-  //   comportamento "una card alla volta" di prima
   Future<void> _loadReports({bool forceRefresh = false}) async {
     if (!mounted) return;
     setState(() {
@@ -188,7 +177,7 @@ class _ReportArchivioScreenState extends State<ReportArchivioScreen> {
               ? () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => ReportDettaglioScreen(report: report),
+                      builder: (_) => ReportDetailScreen(report: report),
                     ),
                   )
               : null,
@@ -198,7 +187,6 @@ class _ReportArchivioScreenState extends State<ReportArchivioScreen> {
   }
 }
 
-// ── Card singola ──────────────────────────────────────────────────────────────
 
 class _ReportCard extends StatelessWidget {
   final WeeklyReport report;
@@ -219,7 +207,6 @@ class _ReportCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    // Placeholder: card senza dati ancora caricati
     final bool isPlaceholder = !report.hasData && report.dateRangeIt.isEmpty;
 
     final String subtitle = isPlaceholder
