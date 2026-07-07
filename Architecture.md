@@ -1,6 +1,4 @@
-# 🧠 Stress Monitor & Muscle Preservation App  Architecture: 
-
-> ( Nome da scegliere )
+# 🧠 Kairos: 
 
 ## 📌 Project Overview
 This mobile application focuses on employee well-being as it balances "cold" biometric data (via Wearable APIs like Fitbit) with "hot" psychological data (Emotional Check-ins) to monitor stress levels and prevent muscle loss due to workplace sedentism. 
@@ -8,8 +6,6 @@ This mobile application focuses on employee well-being as it balances "cold" bio
 The architecture is built on the principles of **Health Design Thinking**:
 - **Human-centered**: Designed with empathy to avoid overwhelming a stressed user.
 - **Privacy-first**: Transparent data management to build trust between employees and the company.
-
-> ( altra roba di Cappon ) 
 
 ---
 
@@ -55,45 +51,37 @@ lib/
  └── widgets/         # Reusable UI components (StressGauge, MuscleAlert)
 ```
 
-### 2. Diagramma Architetturale (Codice SVG)
+### 2. Architectural diagramm (Codice SVG)
 
 ![App Architecture](./Architecture.svg)
 
 
-### 3. Demo (da prendere con le pinze) 
-
-https://app.nowa.dev/home-page
-
-
-
 ---
 
-# Navigation bar da 4
+# Navigation bar: 
 
-## Homepage 
--widget colorato. 
-- Tasto pausa
-- Metriche veloci
-- Facce sorridenti
-- Obiettivo ? (mini-counter)
+## Homepage
 
-## Pagina dei dato  
-- listview con metriche ( con possibilità di vederle giorno per giorno) con Stress Index per primo.
-- Cliccando sulla singola metrica si vede il trend di quella metrica (settimana/mese)
+* Colorful widget.
+* Pause button
+* Quick metrics
+* Goal 
 
-## Esercizi
-- 4 esercizi "generici" rapidi
-- listview scrollabile con tutti gli esercizi
-- tasto di "cerca esercizio" che apre uno schermo con immagine del corpo e tempo
+## Data Page
 
-## Profilo utente
-- 
+* Listview with metrics (with the ability to view them day by day) featuring the Stress Index first.
+* Clicking on a single metric shows the trend for that metric (week/month).
 
+## Exercises
 
-## Profilo utente: 
-- Dati personali
-- Report mensile (raccolta annuale)
-- Notifiche (veloce con on-off e impostazioni)
-- Obiettivi
+* 4 quick "generic" exercises
+* Scrollable listview with all exercises
+* "Search exercise" button that opens a screen with a body map/image and time.
 
+## User Profile:
+
+* Personal data
+* Monthly report (yearly collection)
+* Notifications (quick with on/off and settings)
+* Goals
 
