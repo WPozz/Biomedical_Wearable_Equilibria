@@ -48,7 +48,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   activeColor: colorScheme.primary,
                   onChanged: (bool value) {
                     context.read<SettingsProvider>().setCustomGoalsEnabled(value);
-                    context.read<DataProvider>().clearArchiveCache(); // <-- AGGIUNTO QUI
+                    context.read<DataProvider>().clearArchiveCache();
                   },
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
@@ -69,7 +69,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                         title: isItalian ? 'Durata sonno' : 'Sleep duration',
                         value: '${settings.sleepHours}h ${settings.sleepMinutes}min',
                         subtitle: isItalian ? 'Quotidiano' : 'Daily',
-                        onTap: () => _mostraDialogoSonno(context, settings, isItalian),
+                        onTap: () => _showSleepDialog(context, settings, isItalian),
                         colorScheme: colorScheme,
                       ),
 
@@ -80,12 +80,12 @@ class _GoalsScreenState extends State<GoalsScreen> {
                         title: isItalian ? 'Passi' : 'Steps',
                         value: settings.steps.toString(),
                         subtitle: isItalian ? 'Quotidiano' : 'Daily',
-                        onTap: () => _mostraDialogoNumerico(
+                        onTap: () => _showNumericDialog(
                           context: context,
-                          titolo: isItalian ? 'Imposta passi' : 'Set steps',
-                          valoreIniziale: settings.steps,
-                          unitaDiMisura: isItalian ? 'passi' : 'steps',
-                          onSalva: (nuovoValore) => context.read<SettingsProvider>().setStepsGoal(nuovoValore),
+                          title: isItalian ? 'Imposta passi' : 'Set steps', 
+                          startingValue: settings.steps,
+                          measurementUnit: isItalian ? 'passi' : 'steps',
+                          onSave: (newValue) => context.read<SettingsProvider>().setStepsGoal(newValue),
                           isItalian: isItalian,
                         ),
                         colorScheme: colorScheme,
@@ -141,8 +141,8 @@ class _GoalsScreenState extends State<GoalsScreen> {
     );
   }
 
-  void _mostraDialogoSonno(BuildContext context, SettingsProvider settings, bool isItalian) {
-    int tempOre = settings.sleepHours;
+  void _showSleepDialog(BuildContext context, SettingsProvider settings, bool isItalian) {
+    int tempHours = settings.sleepHours;
     int tempMin = settings.sleepMinutes;
 
     showDialog(
@@ -156,10 +156,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
               SizedBox(
                 width: 60,
                 child: TextFormField(
-                  initialValue: tempOre.toString(),
+                  initialValue: tempHours.toString(),
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.center,
-                  onChanged: (val) => tempOre = int.tryParse(val) ?? 0,
+                  onChanged: (val) => tempHours = int.tryParse(val) ?? 0,
                   decoration: const InputDecoration(suffixText: 'h'),
                 ),
               ),
@@ -183,7 +183,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
             ),
             FilledButton(
               onPressed: () {
-                context.read<SettingsProvider>().setSleepGoal(tempOre, tempMin); 
+                context.read<SettingsProvider>().setSleepGoal(tempHours, tempMin); 
                 context.read<DataProvider>().clearArchiveCache(); 
                 Navigator.pop(context);
               },
@@ -195,30 +195,30 @@ class _GoalsScreenState extends State<GoalsScreen> {
     );
   }
 
-  void _mostraDialogoNumerico({
+  void _showNumericDialog({
     required BuildContext context,
-    required String titolo,
-    required int valoreIniziale,
-    required String unitaDiMisura,
-    required Function(int) onSalva,
+    required String title,
+    required int startingValue,
+    required String measurementUnit,
+    required Function(int) onSave,
     required bool isItalian,
   }) {
-    int tempValore = valoreIniziale;
+    int tempValue = startingValue;
 
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text(titolo),
+          title: Text(title), 
           content: TextFormField(
-            initialValue: tempValore.toString(),
+            initialValue: tempValue.toString(), // Questo DEVE restare initialValue
             keyboardType: TextInputType.number,
             autofocus: true,
             decoration: InputDecoration(
-              suffixText: unitaDiMisura,
+              suffixText: measurementUnit,
               border: const OutlineInputBorder(),
             ),
-            onChanged: (val) => tempValore = int.tryParse(val) ?? valoreIniziale,
+            onChanged: (val) => tempValue = int.tryParse(val) ?? startingValue,
           ),
           actions: [
             TextButton(
@@ -227,7 +227,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
             ),
             FilledButton(
               onPressed: () {
-                onSalva(tempValore); 
+                onSave(tempValue); 
                 context.read<DataProvider>().clearArchiveCache(); 
                 Navigator.pop(context);
               },
