@@ -273,7 +273,7 @@ class _ProfileState extends State<Profile> {
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (_) => const DatiPersonaliScreen()),
+                              builder: (_) => const PersonalDataScreen()),
                         ),
                       ),
                       
