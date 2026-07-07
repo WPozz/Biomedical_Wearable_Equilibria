@@ -476,9 +476,7 @@ class DataProvider extends ChangeNotifier {
   }
 
   // ── fetchCalculatedStressRange ────────────────────────────────────────────
-  // Calcola lo stress per un range di giorni combinando sleep + HR + steps
-  // + zone esercizio. Usato dalla schermata Analysis & Trends (grafico
-  // settimanale/mensile dello stress).
+  // Retrieves stress for a range of days
 
   Future<List<MetricPoint>> fetchCalculatedStressRange(
       String startDate, String endDate) async {
@@ -494,7 +492,6 @@ class DataProvider extends ChangeNotifier {
     final Map<String, Map<String, double>> exerciseZoneMinutes =
         await fetchExerciseZoneMinutesRange(startDate, endDate);
 
-    // Costruiamo una mappa date → DailyRawData popolando i dati disponibili
     final Map<String, DailyRawData> dailyDataMap = {};
 
     void populateMap(
@@ -521,7 +518,6 @@ class DataProvider extends ChangeNotifier {
       dailyDataMap[date]!.heartRateZoneMinutes = zoneMinutes;
     });
 
-    // Calcoliamo lo stress per ogni giorno e ordiniamo per data
     final List<MetricPoint> stressPoints = dailyDataMap.entries.map((entry) {
       return MetricPoint(
         shortLabel: entry.value.shortLabel,
@@ -535,16 +531,11 @@ class DataProvider extends ChangeNotifier {
   }
 
   // ── fetchCalculatedStressSingleDay ────────────────────────────────────────
-  // Calcola lo stress per un singolo giorno. Usato dalla home screen e dalla
-  // schermata Analysis & Trends in modalità "Day".
+  // Retrieves stress for a day, used in home and analysis and trends
 
   Future<List<MetricPoint>> fetchCalculatedStressSingleDay(String day) async {
     final results = await Future.wait([
       fetchSingleDayMetric('sleep', day),
-      // Per HR e steps usiamo fetchMetricRange anche qui: l'endpoint /daterange/
-      // con start==end non funziona per step/calories/distance (vedi home),
-      // ma per heart_rate e steps usati nello stress funziona perché il
-      // WeeklyReportBuilder li usa già in questo modo e i dati arrivano.
       fetchMetricRange('heart_rate', day, day),
       fetchMetricRange('steps',      day, day),
     ]);
@@ -552,10 +543,6 @@ class DataProvider extends ChangeNotifier {
     final Map<String, Map<String, double>> exerciseZoneMinutes =
         await fetchExerciseZoneMinutesRange(day, day);
 
-    // Assembliamo il DailyRawData per il giorno richiesto:
-    // - sleep: .first.value perché fetchSingleDayMetric restituisce già il totale
-    // - HR:    .first.value perché fetchMetricRange restituisce la media giornaliera
-    // - steps: .first.value perché fetchMetricRange restituisce il totale giornaliero
     final raw = DailyRawData(shortLabel: day)
       ..sleepHours           = results[0].isNotEmpty ? results[0].first.value : 0.0
       ..heartRate            = results[1].isNotEmpty ? results[1].first.value : 0.0
@@ -572,14 +559,7 @@ class DataProvider extends ChangeNotifier {
   }
 
   // ── _makeAuthenticatedGetRequest ──────────────────────────────────────────
-  // Esegue una GET con il token Bearer. Se la risposta è 401/403 (token
-  // scaduto) prova il refresh automatico e ripete la chiamata una sola volta.
-  //
-  // NOTA: authProvider.refresh() ora è internamente protetto da un lock
-  // (vedi AuthProvider), quindi anche se questo metodo viene chiamato da
-  // più richieste in parallelo, solo UN refresh HTTP viene davvero eseguito:
-  // le altre chiamate aspettano il risultato di quello in corso invece di
-  // innescarne uno proprio con un refresh-token già "consumato".
+  // Implements GET method
 
   Future<http.Response?> _makeAuthenticatedGetRequest(Uri url) async {
     var response = await http.get(
@@ -601,9 +581,7 @@ class DataProvider extends ChangeNotifier {
 }
 
 // ── WeekBundle ────────────────────────────────────────────────────────────────
-// Contenitore dei dati aggregati per una settimana, restituito da fetchWeekBundle.
-// Raggruppa tutte le metriche in un'unica struttura per evitare di passare
-// liste separate tra WeeklyReportBuilder e DataProvider.
+// fetchWeekBundle output
 
 class WeekBundle {
   final List<MetricPoint> sleep;
