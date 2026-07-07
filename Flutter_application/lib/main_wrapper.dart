@@ -28,7 +28,7 @@ class _MainWrapperState extends State<MainWrapper> {
     _pages = [
       HomeScreen(onDailyDataLoaded: _onHomeReady),
       const AnalysisAndTrendsScreen(),
-      const EserciziScreen(),
+      const ExerciseScreen(),
       const Profile(),
     ];
   }

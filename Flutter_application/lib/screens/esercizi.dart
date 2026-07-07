@@ -5,14 +5,14 @@ import 'video_player.dart';
 import 'cerca_esercizio.dart';
 import 'package:flutter_application/providers/settings_provider.dart';
 
-class EserciziScreen extends StatefulWidget {
-  const EserciziScreen({super.key});
+class ExerciseScreen extends StatefulWidget {
+  const ExerciseScreen({super.key});
 
   @override
-  State<EserciziScreen> createState() => _EserciziScreenState();
+  State<ExerciseScreen> createState() => _ExerciseScreenState();
 }
 
-class _EserciziScreenState extends State<EserciziScreen> {
+class _ExerciseScreenState extends State<ExerciseScreen> {
   late List<ExerciseVideo> _randomQuickVideos;
 
   @override

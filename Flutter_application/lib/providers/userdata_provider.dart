@@ -16,8 +16,8 @@ class UserDataProvider extends ChangeNotifier {
   String weightUnit = "kg";
 
   // Profile image
-  String avatarData = "default"; // "default", "asset:assets/images/...", o "/percorso/galleria.jpg"
-
+  String avatarData = "default"; 
+  
   UserDataProvider() {
     _loadData();
   }

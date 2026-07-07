@@ -125,7 +125,6 @@ class SettingsProvider extends ChangeNotifier {
     await prefs.setBool(_notifGoalsKey, value);
   }
 
-  // NUOVO
   Future<void> setShareHRData(bool value) async {
     _shareHRData = value;
     notifyListeners();

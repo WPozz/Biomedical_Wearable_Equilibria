@@ -180,7 +180,7 @@ class _CercaEsercizioScreenState extends State<CercaEsercizioScreen> {
                     height: canvasH,
                     child: Opacity(
                       opacity: _tutteLeZone ? 0.3 : 1.0,
-                      child: _buildFigura(layout),
+                      child: _buildFigure(layout),
                     ),
                   ),
                 );
@@ -202,7 +202,7 @@ class _CercaEsercizioScreenState extends State<CercaEsercizioScreen> {
                   return zoneMatch && timeMatch;
                 }).toList();
                 Navigator.push(context, MaterialPageRoute(
-                  builder: (context) => RisultatiRicercaScreen(videoFiltrati: risultati, isItalian: isItalian),
+                  builder: (context) => SearchResults(videoFiltrati: risultati, isItalian: isItalian),
                 ));
               },
               child: Text(
@@ -216,7 +216,7 @@ class _CercaEsercizioScreenState extends State<CercaEsercizioScreen> {
     );
   }
 
-   Widget _buildFigura(BodyZoneLayout layout) {
+   Widget _buildFigure(BodyZoneLayout layout) {
     return Stack(
       children: [
         Positioned.fill(
@@ -299,13 +299,13 @@ class SilhouettePainter extends CustomPainter {
       old.layout.cx != layout.cx;
 }
 
-//  RISULTATI RICERCA
+//  SEARCH RESULTS
 
-class RisultatiRicercaScreen extends StatelessWidget {
+class SearchResults extends StatelessWidget {
   final List<ExerciseVideo> videoFiltrati;
   final bool isItalian;
 
-  const RisultatiRicercaScreen({super.key, required this.videoFiltrati, required this.isItalian});
+  const SearchResults({super.key, required this.videoFiltrati, required this.isItalian});
 
   @override
   Widget build(BuildContext context) {
