@@ -1,16 +1,5 @@
 import "package:flutter/material.dart";
 
-/// VARIANTE B
-/// primary/secondary BLU originali invariati (sterilità/pulizia sui dati).
-/// Cambia solo "tertiary" da teal freddo a un ambra caldo,
-/// usato per accenti, tag e dettagli minori — un tocco di calore
-/// senza intaccare la sensazione clinica dei numeri principali.
-///
-/// Sfondo consigliato in main.dart: stesso discorso della Variante A,
-/// preferibile un grigio-crema neutro per non confliggere col blu.
-///   light -> Color(0xFFF7F7FA)
-///   dark  -> Color(0xFF121212)
-
 class MaterialTheme {
   final TextTheme textTheme;
 

@@ -18,49 +18,29 @@ class DailyRawData {
 abstract class StressCalculator {
   static const double _baseStress = 35.0;
 
-  // Sonno mancante o cattivo 
+  // Sleep
   static const double _idealSleepHours = 8.0;
   static const double _sleepPenaltyPerHour = 7.0;
-  // Se dormi solo 5.5 ore, ti mancano 2.5 ore . L'algoritmo fa: 2.5 ore perse × 7.0 = +17.5 punti di stress aggiunti
   static const double _missingDataSleepPenalty = 8.0;
 
+  // HR
   static const double _restingHrThreshold = 65.0;
   static const double _hrPenaltyFactor = 1.8;
-  // Se un giorno hai una media di 75 bpm, sei 10 battiti sopra la soglia. L'algoritmo fa: 10 bpm extra × 1.8 = +18 punti
 
-  // Cap alla penalità HR pura 
-  // Perché: la frequenza cardiaca MEDIA GIORNALIERA include anche i minuti
-  // di un eventuale allenamento. Senza un limite, un giorno con
-  // un'uscita in bici lunga può generare una hrPenalty altissima (es. 25-40
-  // punti) che il relief da esercizio (_maxExerciseRelief = 15)
-  // non riesce mai a controbilanciare. Risultato: i giorni con più sport
-  // risultavano sistematicamente PIÙ stressanti dei giorni sedentari,
-  // l'opposto di quanto l'app vuole comunicare.
+  // Cap for HR penalty
   static const double _maxHrPenalty = 25.0;
 
-  // Sconto sulla HR penalty proporzionale al TRIMP del giorno
-  // Perché: anche con il cap sopra, un giorno con sport intenso parte
-  // comunque da una hrPenalty più alta di un giorno sedentario (perché la
-  // media HR del giorno è più alta). Per evitare che la sola hrPenalty
-  // cappata "mangi" gran parte del relief da esercizio lasciando il giorno
-  // sportivo comunque più stressante del feriale, scontiamo la hrPenalty in
-  // proporzione al carico di allenamento registrato: più TRIMP, più
-  // riconosciamo che l'HR elevata di quel giorno è dovuta (almeno in parte)
-  // allo sport e non a un carico simpatico "negativo".
+  // Discount on the HR penalty proportional to the day's TRIMP
   static const double _hrDiscountPerTrimpPoint = 0.004;
 
-  // Sconto massimo applicabile alla hrPenalty: anche con un TRIMP molto alto
-  // (es. uscite molto lunghe), una quota minima di hrPenalty resta sempre.
-  // Senza questo cap, sopra una certa soglia di TRIMP lo sconto arriva al
-  // 100%, la hrPenalty si azzera del tutto, e la formula collassa sempre
-  // sullo stesso valore minimo nei giorni con sport — perdendo qualunque
-  // variazione utile a distinguere un allenamento moderato da uno intenso.
+  // Maximum possible discount on HR penalty
   static const double _maxHrDiscount = 0.6;
 
+  // Steps
   static const double _activityReliefPer1000Steps = 0.6;
   static const double _maxStepsRelief = 9.0;
-  // Limite massimo di punti di stress che puoi farti scalare semplicemente camminando.
-
+  
+  // Exercises -- Trimp
   static const Map<String, double> _trimpZoneWeights = {
     'outOfZone': 1.0,
     'fatBurn': 2.0,
@@ -95,17 +75,12 @@ abstract class StressCalculator {
       sleepPenalty = _missingDataSleepPenalty;
     }
 
-    // TRIMP del giorno: calcolato prima della hrPenalty, perché ora serve
-    // anche per scontare quest'ultima (oltre che per l'exerciseRelief).
     final double dailyTrimp = _calculateDailyTrimp(raw.heartRateZoneMinutes);
 
     double hrPenalty = 0.0;
     if (raw.heartRate > _restingHrThreshold) {
       hrPenalty = (raw.heartRate - _restingHrThreshold) * _hrPenaltyFactor;
-      // Cap: la sola HR alta non può pesare più di _maxHrPenalty punti.
       hrPenalty = hrPenalty.clamp(0.0, _maxHrPenalty);
-      // Sconto proporzionale al TRIMP: se quel giorno c'è stato sport,
-      // parte dell'HR elevata è "spiegata" dall'allenamento, non da stress.
       if (dailyTrimp > 0) {
         final double discount =
             (dailyTrimp * _hrDiscountPerTrimpPoint).clamp(0.0, _maxHrDiscount);
