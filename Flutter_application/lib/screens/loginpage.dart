@@ -12,7 +12,6 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   
-  // Pre-compiliamo i campi per comodità durante la demo
   final TextEditingController _usernameController = TextEditingController(text: 'VKM4CPfO22');
   final TextEditingController _passwordController = TextEditingController(text: '12345678!');
   
@@ -35,7 +34,7 @@ class _LoginPageState extends State<LoginPage> {
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     
-    // Tentativo di login verso il server IMPACT
+    // Try the login on the server IMPACT
     final success = await authProvider.login(
       _usernameController.text.trim(),
       _passwordController.text,
@@ -47,11 +46,8 @@ class _LoginPageState extends State<LoginPage> {
       });
 
       if (success) {
-        // Se il login ha successo, il Consumer in main.dart ci porterà
-        // automaticamente alla MainWrapper. Non serve fare Navigator.push!
         print("Login riuscito!");
       } else {
-        // Mostriamo l'errore in modo elegante
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(

@@ -6,8 +6,8 @@ import 'dart:math';
 import '../data/video_archive.dart';
 import 'video_player.dart';
 
-class PausaAttivaScreen extends StatelessWidget {
-  const PausaAttivaScreen({super.key});
+class ActiveBreakScreen extends StatelessWidget {
+  const ActiveBreakScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +79,7 @@ class PausaAttivaScreen extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // --- SOLLIEVO MIRATO ---
+                // --- TARGET RELIEF ---
                 _buildOptionCard(
                   context: context,
                   title: isItalian ? 'Sollievo mirato' : 'Targeted relief',

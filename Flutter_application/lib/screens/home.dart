@@ -341,7 +341,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => const PausaAttivaScreen()),
+                            builder: (context) => const ActiveBreakScreen()),
                       );
                     },
                     icon: const Icon(Icons.emoji_people, size: 40),

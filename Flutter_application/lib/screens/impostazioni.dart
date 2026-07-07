@@ -68,7 +68,7 @@ class SettingsScreen extends StatelessWidget {
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const NotificheScreen(),
+                            builder: (context) => const NotificationsScreen(),
                           ),
                         ),
                       ),
