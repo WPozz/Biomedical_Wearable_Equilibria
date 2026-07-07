@@ -98,7 +98,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   
 
-                  // Campo Username
+                  // Username
                   TextFormField(
                     controller: _usernameController,
                     decoration: InputDecoration(
@@ -119,7 +119,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Campo Password
+                  // Password
                   TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
@@ -151,7 +151,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 32),
 
-                  // Bottone Log In
+                  // Log In Button
                   SizedBox(
                     height: 56,
                     child: ElevatedButton(
@@ -183,11 +183,11 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   
-                  // Link "Forgot Password" (Opzionale)
+                  // "Forgot Password"
                   const SizedBox(height: 16),
                   TextButton(
                     onPressed: () {
-                      // Implementare logica di recupero password in futuro
+                      // Future implementation
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Please contact your administrator to reset your password.')),
                       );

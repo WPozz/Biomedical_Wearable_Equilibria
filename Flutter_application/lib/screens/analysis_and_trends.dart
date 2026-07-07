@@ -9,8 +9,8 @@ import '../providers/userdata_provider.dart';
 import '../services/weekly_report_builder.dart';
 import '../providers/settings_provider.dart';
 
-/// KEY POINT 0: Color Semantics
-/// Defines a set of semantic color roles to enhance the clarity of the interface and improve accessibility.
+// Color Semantics
+// Defines a set of semantic color roles to enhance the clarity of the interface and improve accessibility.
 
 extension SemanticRoles on ColorScheme {
   Color get highlight => primary;
@@ -20,9 +20,7 @@ extension SemanticRoles on ColorScheme {
   Color get onSurfaceRole => onSurface;
 }
 
-/// Metric Catalog
-/// This list defines the available metrics, their display names, units, icons, and associated color tones 
-/// for the interface.
+// Metric Catalog
 
 class AnalysisAndTrendsScreen extends StatefulWidget {
   const AnalysisAndTrendsScreen({super.key});
@@ -32,8 +30,7 @@ class AnalysisAndTrendsScreen extends StatefulWidget {
       _AnalysisAndTrendsScreenState();
 }
 
-/// State Management for Analysis and Trends Screen
-/// This class manages the state of the Analysis and Trends screen, including the selected metric, time period, data loading, error handling, and caching of metric data.
+// State Management for Analysis and Trends Screen
 
 class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
   int _selectedMetricIndex = 0;
@@ -52,8 +49,7 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
 
   _MetricDefinition get _selectedMetric => _metricCatalog[_selectedMetricIndex];
 
-  /// History Boundaries
-  /// Defines retention boundaries (approx. 6 months) for pagination.
+  // History Boundaries
   
   int get _minOffset {
     switch (_selectedPeriod) {
@@ -124,9 +120,9 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
     return '$year-$month-$day';
   }
 
-  /// Date Range Generation
-  /// Computes specific formatting ranges for API ingestion payloads.
-  /// Day view tracks a standalone date, while Week view handles a structured 7-day chunk.
+  // Date Range Generation
+  // Computes specific formatting ranges for API ingestion payloads.
+  // Day view tracks a standalone date, while Week view handles a structured 7-day chunk.
   
   _DateRange _getDateRange(_TrendPeriod period, int offset) {
     final DateTime yesterday = WeeklyReportBuilder.kArchiveEnd;
@@ -150,9 +146,7 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
     }
   }
 
-  /// Core Repository Fetching & Error Management
-  /// Performs asynchronous retrieval for the active metric based on timeframe criteria.
-  /// Resolves the 'stress' type via dedicated endpoints while encapsulating network exceptions.
+  // Core Repository Fetching & Error Management
   
   Future<void> _loadMetricData() async {
     final _DateRange range = _getDateRange(_selectedPeriod, _windowOffset);
@@ -261,9 +255,9 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
     }
   }
 
-  /// Performance Optimization via Background Preloading
-  /// Asynchronously populates the local cache for unselected catalog metrics.
-  /// Prevents interface stutter or loading blocks when users switch active tabs.
+  // Performance Optimization via Background Preloading
+  // Asynchronously populates the local cache for unselected catalog metrics.
+  // Prevents interface stutter or loading blocks when users switch active tabs.
   
   Future<void> _preloadOtherMetrics() async {
     final _DateRange range = _getDateRange(_selectedPeriod, _windowOffset);
@@ -418,8 +412,6 @@ class _AnalysisAndTrendsScreenState extends State<AnalysisAndTrendsScreen> {
 
 
                           /// KEY POINT 5: Conditional UI Presentation Layout
-                          /// Renders a dedicated single-value card widget for intraday metrics (Sleep/Stress) 
-                          /// instead of building a line chart which requires multiple points to display data.
                           
                           : ((_selectedMetric.apiMetric == 'sleep' ||
                                     _selectedMetric.apiMetric == 'stress') &&
@@ -891,11 +883,6 @@ class _MetricTrendChart extends StatelessWidget {
     double effectiveMinY = 0.0;
     double effectiveMaxY = 100.0;
     double intervalY = 25.0;
-
-    /// Metric Domain Hardcoded Bounds Calibration
-    /// Establishes mathematical, stable viewport heights and scale segments 
-    /// tailored to the physiological reality of each biometric domain.
-    /// This keeps charts visually readable, scaling appropriately for each metric.
     
     if (metricId == 'stress') {
       effectiveMinY = 0.0;
@@ -1105,7 +1092,7 @@ class _MetricTrendChart extends StatelessWidget {
   }
 }
 
-/// Formats a metric value with its unit, applying specific formatting rules based on the unit type.
+// Formats a metric value with its unit
 String _formatMetricValue(double value, String unit) {
   final bool useDecimals = unit == 'h';
   final String formatted = useDecimals
@@ -1183,8 +1170,7 @@ const List<_MetricDefinition> _metricCatalog = [
   ),
 ];
 
-// Defines a card widget that displays a daily summary for specific metrics like sleep and stress, 
-//including an icon, main value, and descriptive text.
+// Defines a card widget that displays a daily summary for specific metrics
 
 class _DailySummaryCard extends StatelessWidget {
   const _DailySummaryCard({
