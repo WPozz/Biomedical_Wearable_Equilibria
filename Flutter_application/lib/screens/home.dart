@@ -28,12 +28,10 @@ class _HomeScreenState extends State<HomeScreen> {
   int _stressLevel = 0;
   double _sleepHours = 0;
   double _steps = 0;
-  double _calories = 0;
   double _distanceKm = 0;
 
   bool _sleepMissing = true;
   bool _stepsMissing = true;
-  bool _caloriesMissing = true;
   bool _distanceMissing = true;
 
   bool _isLoadingReport = true;
@@ -108,7 +106,6 @@ class _HomeScreenState extends State<HomeScreen> {
       final results = await Future.wait([
         dataProvider.fetchSingleDayMetric('sleep',    _syncedDayStr),
         dataProvider.fetchSingleDayMetric('steps',    _syncedDayStr),
-        dataProvider.fetchSingleDayMetric('calories', _syncedDayStr),
         dataProvider.fetchSingleDayMetric('distance', _syncedDayStr),
         dataProvider.fetchCalculatedStressSingleDay(_syncedDayStr),
       ]);
@@ -117,9 +114,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final List<MetricPoint> sleepPoints    = results[0];
       final List<MetricPoint> stepsPoints    = results[1];
-      final List<MetricPoint> caloriesPoints = results[2];
-      final List<MetricPoint> distancePoints = results[3];
-      final List<MetricPoint> stressPoints   = results[4];
+      final List<MetricPoint> distancePoints = results[2];
+      final List<MetricPoint> stressPoints   = results[3];
 
       double sumValues(List<MetricPoint> points) => points.isEmpty
           ? 0.0
@@ -128,12 +124,10 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _sleepMissing    = sleepPoints.isEmpty;
         _stepsMissing    = stepsPoints.isEmpty;
-        _caloriesMissing = caloriesPoints.isEmpty;
         _distanceMissing = distancePoints.isEmpty;
 
         _sleepHours  = sleepPoints.isNotEmpty ? sleepPoints.first.value : 0;
         _steps       = sumValues(stepsPoints);
-        _calories    = sumValues(caloriesPoints);
 
         _distanceKm  = distancePoints.isNotEmpty
             ? sumValues(distancePoints) / 100000.0
@@ -147,7 +141,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
         final bool noDataAtAll = sleepPoints.isEmpty &&
             stepsPoints.isEmpty &&
-            caloriesPoints.isEmpty &&
             distancePoints.isEmpty;
         if (noDataAtAll) _dailyErrorMessage = 'no_data';
       });
@@ -392,39 +385,11 @@ class _HomeScreenState extends State<HomeScreen> {
             Expanded(
               child: _buildMetricCard(
                 context,
-                isItalian ? "Durata sonno" : "Sleep Duration",
-                _fmtSleep(_sleepHours),
-                Icons.nights_stay,
-                Theme.of(context).colorScheme.primary,
-                isMissing: _sleepMissing,
-                isLoading: _isLoadingDaily,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildMetricCard(
-                context,
                 isItalian ? "Passi" : "Steps",
                 _fmtSteps(_steps),
-                Icons.directions_walk ,
+                Icons.directions_walk,
                 Theme.of(context).colorScheme.secondary,
                 isMissing: _stepsMissing,
-                isLoading: _isLoadingDaily,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildMetricCard(
-                context,
-                isItalian ? "Calorie" : "Calories",
-                '${_calories.round()} kcal',
-                Icons.local_fire_department,
-                Theme.of(context).colorScheme.tertiary,
-                isMissing: _caloriesMissing,
                 isLoading: _isLoadingDaily,
               ),
             ),
@@ -441,6 +406,16 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 12),
+        _buildMetricCard(
+          context,
+          isItalian ? "Durata sonno" : "Sleep Duration",
+          _fmtSleep(_sleepHours),
+          Icons.nights_stay,
+          Theme.of(context).colorScheme.primary,
+          isMissing: _sleepMissing,
+          isLoading: _isLoadingDaily,
         ),
         const SizedBox(height: 12),
         _buildLastReportCard(context, isItalian),

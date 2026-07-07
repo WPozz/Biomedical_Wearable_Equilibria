@@ -19,55 +19,25 @@ class DataProvider extends ChangeNotifier {
 
   DataProvider({required this.authProvider});
 
-  // ╔══════════════════════════════════════════════════════════════════════╗
-  // ║  CACHE CONDIVISA DEI WEEKLY REPORT                                   ║
-  // ╠══════════════════════════════════════════════════════════════════════╣
-  // ║  PERCHÉ: prima, Profile, HomeScreen e ReportArchivioScreen ognuno    ║
-  // ║  calcolava "l'ultima settimana" per conto proprio, con le sue        ║
-  // ║  chiamate di rete indipendenti, in momenti diversi. Risultato:       ║
-  // ║  - la stessa identica settimana veniva scaricata e calcolata fino   ║
-  // ║    a 2 volte (una da Profile, una come prima riga dell'Archivio)    ║
-  // ║  - lastWeeklyReport non veniva mai scritto da nessuna parte, quindi ║
-  // ║    la Home mostrava sempre il placeholder "non disponibile"         ║
-  // ║  - se una qualsiasi delle ~9 richieste di rete di QUEL calcolo      ║
-  // ║    falliva (es. per via di un refresh-token in corsa, vedi          ║
-  // ║    AuthProvider), SOLO quella schermata risultava con dati          ║
-  // ║    mancanti o "no data", mentre le altre — che avevano fatto le     ║
-  // ║    loro chiamate in un momento diverso — magari andavano bene.      ║
-  // ║    Questo è ciò che sembrava "aleatorio".                           ║
-  // ║                                                                      ║
-  // ║  FIX: un'unica cache in memoria, dietro a getter/metodi che fanno   ║
-  // ║  fetch solo se serve davvero, e notifyListeners() quando i dati     ║
-  // ║  cambiano, così tutte le schermate restano sincronizzate.           ║
-  // ╚══════════════════════════════════════════════════════════════════════╝
+
 
   WeeklyReport? _lastWeeklyReport;
   List<WeeklyReport>? _cachedArchive;
 
-  // Evita fetch duplicate in parallelo se due schermate richiedono
-  // lo stesso report nello stesso istante (es. Home e Profilo aperte
-  // a cascata mentre il primo fetch è ancora in corso).
   Future<WeeklyReport>? _lastReportInFlight;
   Future<List<WeeklyReport>>? _archiveInFlight;
 
   WeeklyReport? get lastWeeklyReport => _lastWeeklyReport;
   List<WeeklyReport>? get cachedArchive => _cachedArchive;
 
-  /// Invalida tutta la cache dei report (sia "ultimo" che archivio).
-  /// Da chiamare quando cambiano i goal nelle impostazioni, perché i report
-  /// dipendono da stepsGoalTarget/sleepGoalHours/goalsEnabled.
+
   void clearArchiveCache() {
     _cachedArchive = null;
     _lastWeeklyReport = null;
     notifyListeners();
   }
 
-  /// Restituisce l'ultimo report settimanale, calcolandolo solo se non è
-  /// già in cache (o se [forceRefresh] è true). Lo scrive anche come prima
-  /// riga della cache archivio, così le due fonti restano coerenti.
-  ///
-  /// Usato da HomeScreen e Profile — prima ognuno calcolava il proprio,
-  /// ora condividono lo stesso risultato e lo stesso eventuale errore.
+
   Future<WeeklyReport> getOrFetchLatestReport({
     required int stepsGoalTarget,
     required double sleepGoalHours,
@@ -78,8 +48,7 @@ class DataProvider extends ChangeNotifier {
       return _lastWeeklyReport!;
     }
 
-    // Se è già in corso un fetch (lanciato da un'altra schermata aperta
-    // pochi istanti prima), aspettiamo quello invece di duplicarlo.
+
     if (!forceRefresh && _lastReportInFlight != null) {
       return _lastReportInFlight!;
     }
@@ -95,8 +64,6 @@ class DataProvider extends ChangeNotifier {
       final report = await future;
       _lastWeeklyReport = report;
 
-      // Teniamo sincronizzata anche la prima riga dell'archivio, se già
-      // presente in cache, così Archivio e Home/Profilo non divergono.
       if (_cachedArchive != null && _cachedArchive!.isNotEmpty) {
         _cachedArchive![0] = report;
       }
@@ -125,10 +92,7 @@ class DataProvider extends ChangeNotifier {
     );
   }
 
-  /// Restituisce l'archivio completo (8 settimane), riusando la cache se
-  /// già presente. Popola via via la lista e notifica ad ogni settimana
-  /// pronta tramite [onProgress], così la UI può mostrare le card una alla
-  /// volta come faceva prima, ma con UNA sola fonte di dati condivisa.
+
   Future<List<WeeklyReport>> getOrFetchArchive({
     required int stepsGoalTarget,
     required double sleepGoalHours,
@@ -173,7 +137,6 @@ class DataProvider extends ChangeNotifier {
     required bool goalsEnabled,
     void Function(List<WeeklyReport> partial)? onProgress,
   }) async {
-    // Riprendiamo da dove eravamo arrivati se c'è già una cache parziale.
     final List<WeeklyReport> reports = _cachedArchive != null
         ? List.from(_cachedArchive!)
         : [];
@@ -196,8 +159,6 @@ class DataProvider extends ChangeNotifier {
     for (int i = startIndex; i < ranges.length; i++) {
       final r = ranges[i];
 
-      // La prima riga (settimana corrente) coincide con "l'ultimo report":
-      // se è già in cache lì, evitiamo di ricalcolarla una seconda volta.
       if (i == 0 && _lastWeeklyReport != null) {
         reports[i] = _lastWeeklyReport!;
       } else {
@@ -224,16 +185,12 @@ class DataProvider extends ChangeNotifier {
   int _firstIncompleteIndex(List<WeeklyReport> reports) {
     for (int i = 0; i < reports.length; i++) {
       final r = reports[i];
-      // Una riga è "ancora da caricare" se è un placeholder vuoto
-      // (creato da WeeklyReport.empty con dateRangeIt vuoto).
-      if (!r.hasData && r.dateRangeIt.isEmpty) return i;
+       if (!r.hasData && r.dateRangeIt.isEmpty) return i;
     }
     return reports.length;
   }
 
-  // Mappa i nomi delle zone HR (italiano/inglese) alla chiave interna.
-  // Il Fitbit usa nomi italiani o inglesi a seconda della lingua del dispositivo.
-  static const Map<String, String> _zoneNameToKey = {
+    static const Map<String, String> _zoneNameToKey = {
     'Fuori zona':        'outOfZone',
     'Out of Range':      'outOfZone',
     'Grassi bruciati':   'fatBurn',
@@ -245,31 +202,12 @@ class DataProvider extends ChangeNotifier {
     'Peak':              'peak',
   };
 
-  // ── fetchDailyData ────────────────────────────────────────────────────────
-  // Aggiorna i totali giornalieri esposti direttamente dal provider
-  // (totalSteps, totalCalories, totalDistance). Usato da schermate che
-  // leggono questi valori via context.watch<DataProvider>().
 
-  Future<void> fetchDailyData(String day) async {
-    if (!authProvider.isAuthenticated) return;
-    isLoading = true;
-    notifyListeners();
-    await _fetchMetric(_patientUsername, day, 'steps',    (v) => totalSteps = v.toInt());
-    await _fetchMetric(_patientUsername, day, 'calories', (v) => totalCalories = v);
-    await _fetchMetric(_patientUsername, day, 'distance', (v) => totalDistance = v);
-    isLoading = false;
-    notifyListeners();
-  }
-
-  // Metriche che si aggregano per somma (non media) nel range giornaliero
-  static const _sumMetrics = {'steps', 'calories', 'distance', 'exercise'};
+  static const _sumMetrics = {'steps', 'distance', 'exercise'};
 
   // ── fetchMetricRange ──────────────────────────────────────────────────────
-  // Chiama l'endpoint /daterange/start_date/.../end_date/ e restituisce
-  // un MetricPoint per ogni giorno del range (già aggregato: somma o media).
-  //
-  // NON usare per un singolo giorno (start == end): l'endpoint /daterange/
-  // restituisce lista vuota in quel caso. Usa fetchSingleDayMetric invece.
+  // Contains one MetricPoint (daily sum or average) for each metric in a range. Used in weekly reports.
+
 
   Future<List<MetricPoint>> fetchMetricRange(
       String metric, String startDate, String endDate) async {
@@ -292,11 +230,6 @@ class DataProvider extends ChangeNotifier {
             if (metric == 'sleep') {
               final dynamic sleepData = dayObj['data'];
               if (sleepData != null && sleepData is Map) {
-                // ── FIX SONNO ──────────────────────────────────────────────
-                // Usavamo timeInBed = tempo totale nel letto (sonno + momenti
-                // svegli) 
-                // Ora usiamo minutesAsleep = sonno reale registrato dal Fitbit,
-                // che esclude i minuti di veglia durante la notte.
                 final double minutes =
                     double.tryParse(sleepData['minutesAsleep'].toString()) ?? 0;
                 byDay[date] = [minutes / 60.0];
@@ -349,12 +282,7 @@ class DataProvider extends ChangeNotifier {
   }
 
   // ── fetchSingleDayMetric ──────────────────────────────────────────────────
-  // Chiama l'endpoint /day/<data>/ e restituisce i punti intraday grezzi
-  // (un punto ogni minuto per steps/calories/distance, ogni 5s per HR).
-  //
-  // Endpoint corretto per un singolo giorno (es. home screen).
-  // I valori NON sono già aggregati: sommare per ottenere il totale
-  // giornaliero di steps/calories/distance (vedi home_screen.dart).
+  // Takes raw data (with a limit of 80 points) and aggregates them (for home screen).
 
   Future<List<MetricPoint>> fetchSingleDayMetric(
       String metric, String day) async {
@@ -371,11 +299,6 @@ class DataProvider extends ChangeNotifier {
         if (metric == 'sleep') {
           final dynamic sleepObj = jsonResponse['data']['data'];
           if (sleepObj == null) return [];
-          // ── FIX SONNO ────────────────────────────────────────────────────
-          // Stessa correzione applicata in fetchMetricRange:
-          // minutesAsleep = sonno reale, esclude i minuti svegli nel letto.
-          // timeInBed (vecchio campo) includeva anche i minuti di veglia
-          // notturna.
           final double minutes =
               double.tryParse(sleepObj['minutesAsleep'].toString()) ?? 0;
           return [
@@ -392,7 +315,6 @@ class DataProvider extends ChangeNotifier {
             .where((e) => (double.tryParse(e['value'].toString()) ?? 0) > 0)
             .toList();
 
-        // Limitiamo i punti a 80 massimo per non sovraccaricare i grafici
         const int maxPoints = 80;
         final List<dynamic> sampled = filtered.length > maxPoints
             ? [
@@ -420,9 +342,7 @@ class DataProvider extends ChangeNotifier {
   }
 
   // ── fetchIntradayHrRange ──────────────────────────────────────────────────
-  // Restituisce i punti HR con timestamp orario completo (data + ora).
-  // Usato dal WeeklyReportBuilder per calcolare la fascia oraria di picco
-  // dello stress durante la settimana.
+  // Contains every HR with its timestamp (used in reports to get peak stress hours).
 
   Future<List<MetricPoint>> fetchIntradayHrRange(
       String startDate, String endDate) async {
@@ -449,9 +369,7 @@ class DataProvider extends ChangeNotifier {
                     double.tryParse(entry['value'].toString()) ?? 0.0;
                 if (value > 0) {
                   points.add(MetricPoint(
-                    // shortLabel = solo l'ora (HH:MM) per il calcolo del picco
                     shortLabel: time.length >= 5 ? time.substring(0, 5) : time,
-                    // fullLabel  = data + ora completa per identificare il giorno
                     fullLabel:  '$date $time',
                     value: value,
                   ));
@@ -471,9 +389,7 @@ class DataProvider extends ChangeNotifier {
   }
 
   // ── fetchExerciseZoneMinutesRange ─────────────────────────────────────────
-  // Restituisce i minuti per zona HR (outOfZone, fatBurn, cardio, peak)
-  // per ogni giorno del range. Usato per calcolare il TRIMP giornaliero
-  // nello StressCalculator.
+  // Contains minutes per HR zone (outOfZone, fatBurn, cardio, peak), used to get daily TRIMP.
 
   Future<Map<String, Map<String, double>>> fetchExerciseZoneMinutesRange(
       String startDate, String endDate) async {
@@ -497,7 +413,7 @@ class DataProvider extends ChangeNotifier {
           final dynamic sessionsRaw = dayObj['data'];
           if (sessionsRaw is! List) continue;
 
-          // Inizializziamo tutte le zone a 0 per il giorno corrente
+
           final Map<String, double> zoneMinutes = {
             'outOfZone': 0.0,
             'fatBurn':   0.0,
@@ -505,7 +421,7 @@ class DataProvider extends ChangeNotifier {
             'peak':      0.0,
           };
 
-          // Sommiamo i minuti di tutte le sessioni di allenamento del giorno
+
           for (final session in sessionsRaw) {
             final dynamic zonesRaw = session['heartRateZones'];
             if (zonesRaw is! List) continue;
@@ -519,7 +435,7 @@ class DataProvider extends ChangeNotifier {
             }
           }
 
-          // Includiamo il giorno solo se c'è stato almeno un minuto di esercizio
+
           if (zoneMinutes.values.any((v) => v > 0)) {
             byDay[date] = zoneMinutes;
           }
@@ -536,20 +452,15 @@ class DataProvider extends ChangeNotifier {
   }
 
   // ── fetchWeekBundle ───────────────────────────────────────────────────────
-  // Aggrega tutte le metriche necessarie per un report settimanale in un
-  // unico bundle. Riduce il numero di chiamate esterne rispetto a fetch
-  // separate, e centralizza la logica di recupero dati settimanali.
-  // Usato esclusivamente dal WeeklyReportBuilder.
+  // Puts weekly data in a bundle for the weekly report. 
 
   Future<WeekBundle> fetchWeekBundle(String startDate, String endDate) async {
-    // Piccoli delay tra le chiamate per non sovraccaricare il server
     final sleepPoints = await fetchMetricRange('sleep', startDate, endDate);
     await Future.delayed(const Duration(milliseconds: 150));
     final stepsPoints = await fetchMetricRange('steps', startDate, endDate);
     await Future.delayed(const Duration(milliseconds: 150));
     final hrPoints    = await fetchMetricRange('heart_rate', startDate, endDate);
     await Future.delayed(const Duration(milliseconds: 150));
-    // HR intraday: timestamp orario completo per il calcolo del picco di stress
     final hrIntradayPoints = await fetchIntradayHrRange(startDate, endDate);
     await Future.delayed(const Duration(milliseconds: 150));
     final exerciseZoneMinutes =
@@ -658,26 +569,6 @@ class DataProvider extends ChangeNotifier {
         value: StressCalculator.calculateDailyStress(raw),
       ),
     ];
-  }
-
-  // ── _fetchMetric ──────────────────────────────────────────────────────────
-  // Helper interno usato da fetchDailyData per aggiornare i totali esposti
-  // direttamente dal provider (totalSteps, totalCalories, totalDistance).
-
-  Future<void> _fetchMetric(String patientUsername, String day, String metric,
-      Function(double) onDataParsed) async {
-    final url = Uri.parse(
-        '$_baseUrl/data/v1/$metric/patients/$patientUsername/day/$day/');
-    final response = await _makeAuthenticatedGetRequest(url);
-    if (response != null && response.statusCode == 200) {
-      final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> dataList = jsonResponse['data']['data'];
-      double sum = 0.0;
-      for (var entry in dataList) {
-        sum += double.parse(entry['value'].toString());
-      }
-      onDataParsed(sum);
-    }
   }
 
   // ── _makeAuthenticatedGetRequest ──────────────────────────────────────────
