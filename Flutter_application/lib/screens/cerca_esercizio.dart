@@ -17,7 +17,6 @@ String _translateCategory(String cat, bool isItalian) {
   }
 }
 
-
 //  BODY ZONE LAYOUT
 
 class BodyZoneLayout {
