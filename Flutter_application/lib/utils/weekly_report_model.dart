@@ -55,23 +55,23 @@ class WeeklyReport {
   final String peakStressTimeRange;
   final int peakStressDaysCount;
 
-  // Sonno
+  // Sleep
   final double avgSleepHours;
   final double prevAvgSleepHours;
   final double sleepStressCorrelation;
   final int missingSleepDays;
   final int missingSleepDaysPrev;
 
-  // Movimento (passi + esercizio strutturato combinati)
+  // Movement (steps + exercises)
   final double avgDailySteps;
   final double prevAvgDailySteps;
   final int exerciseSessions;
   final double stepsStressCorrelation;
 
-  // Stress settimana precedente
+  // SPrevious week stress
   final double prevAvgStressIndex;
 
-  // Obiettivi
+  // Goals
   final bool goalsEnabled;
   final int stepsGoalDaysReached;
   final int sleepGoalDaysReached;
@@ -109,7 +109,6 @@ class WeeklyReport {
     this.missingSleepDaysPrev = 0,
   });
 
-  // Soglie calibrate <=35/52/70
   WeekPerformance get performance {
     if (avgStressIndex <= 35) return WeekPerformance.excellent;
     if (avgStressIndex <= 52) return WeekPerformance.good;
